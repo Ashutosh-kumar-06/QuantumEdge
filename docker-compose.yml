@@ -1,0 +1,107 @@
+# Specify the version of the Docker Compose file format
+version: '3.8'
+
+services:
+  # The RabbitMQ service: acts as a message broker between the API and the workers
+  rabbitmq:
+    image: rabbitmq:3-management # Use the official image that includes a web management UI
+    ports:
+      - "5672:5672" # Port for AMQP protocol (how our apps talk to it)
+      - "15672:15672" # Port for the web management interface
+    environment:
+      RABBITMQ_DEFAULT_USER: guest # Default username
+      RABBITMQ_DEFAULT_PASS: guest # Default password
+    networks:
+      - quantum_network # Connect to our custom network
+
+  # The Redis service: an in-memory data store (available for future caching/sessions)
+  redis:
+    image: redis:alpine # Use a lightweight alpine linux version of redis
+    ports:
+      - "6379:6379" # Default redis port
+    networks:
+      - quantum_network
+
+  # The MongoDB service: our primary database for storing courses, users, and jobs
+  mongodb:
+    image: mongo:latest # Use the official latest mongo image
+    ports:
+      - "27017:27017" # Default mongo port
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root # Admin username
+      MONGO_INITDB_ROOT_PASSWORD: examplepassword # Admin password
+    volumes:
+      - mongodb_data:/data/db # Persist database data to a volume so it isn't lost on restart
+    networks:
+      - quantum_network
+
+  # The API Gateway service: our Node.js backend server
+  api-gateway:
+    build:
+      context: ./api-gateway # Look in the api-gateway folder for the Dockerfile
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000" # Expose port 4000 to the host machine
+    environment:
+      - PORT=4000
+      - MONGO_URI=mongodb://root:examplepassword@mongodb:27017/quantumedge?authSource=admin
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - JWT_SECRET=supersecretkey
+    depends_on:
+      - mongodb # Wait for mongodb to start before starting this
+      - redis # Wait for redis to start
+      - rabbitmq # Wait for rabbitmq to start
+    networks:
+      - quantum_network
+
+  # The Python Simulation Worker: listens to RabbitMQ and executes Qiskit code
+  simulation-worker:
+    build:
+      context: ./simulation-worker
+      dockerfile: Dockerfile
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - rabbitmq
+    volumes:
+      # Mount the Docker socket so this container can spawn child containers (Docker-out-of-Docker)
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - quantum_network
+
+  # The C++ Simulation Worker: listens to RabbitMQ and executes QuEST code
+  cpp-worker:
+    build:
+      context: ./cpp-worker
+      dockerfile: Dockerfile
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - rabbitmq
+    volumes:
+      # Mount the Docker socket so this container can spawn child containers for compiling C++
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - quantum_network
+
+  # The Frontend service: our React web application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173" # Expose the Vite dev server port
+    environment:
+      - VITE_API_URL=http://localhost:4000 # Tell the frontend where the API is located
+    networks:
+      - quantum_network
+
+# Define the custom network that allows all services to communicate using their names as hostnames
+networks:
+  quantum_network:
+    driver: bridge
+
+# Define the persistent volume for MongoDB
+volumes:
+  mongodb_data:

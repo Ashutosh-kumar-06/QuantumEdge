@@ -1,0 +1,1000 @@
+/* 
+ * APP.CSS — Application-Specific Styles
+ * This file contains the styles specific to the QuantumEdge application views:
+ * the Dashboard (module grid), Tutorial reader, and Lab (code editor workspace).
+ * It also redefines some global variables and glassmorphism utilities for this context.
+ */
+
+/* =========================================================================
+   GLOBAL VARIABLES
+   CSS custom properties (also called CSS variables) that define the app's
+   color palette and design tokens. These are set on :root so they can be
+   used anywhere in the stylesheet with var(--name).
+   ========================================================================= */
+
+/* The :root pseudo-class targets the <html> element — the highest level of the document */
+:root {
+  /* The primary accent color — bright cyan used for highlights, links, and interactive elements */
+  --primary: #45f3ff;
+  /* The secondary accent color — a rich purple used for gradients and AI-related elements */
+  --secondary: #7b2cbf;
+  /* The dark background color used as the page's base color */
+  --bg-dark: #0f111a;
+  /* A very subtle white tint (5% opacity) used for glass-panel backgrounds */
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  /* A slightly more visible white (10% opacity) used for borders on glass panels */
+  --glass-border: rgba(255, 255, 255, 0.1);
+  /* The main text color — a light grayish-white for comfortable reading on dark backgrounds */
+  --text: #e2e8f0;
+  /* A muted/dimmed text color — a medium gray for secondary or less important text */
+  --text-muted: #94a3b8;
+  /* A bright green color used to indicate success, completion, and positive states */
+  --success: #00ff88;
+  /* A bright red color used to indicate errors, warnings, and danger states */
+  --danger: #ff4757;
+}
+
+/* 
+ * Body — Styles for the entire page body element.
+ * Sets the global font, dark background with decorative gradient blobs, and text color.
+ */
+body {
+  /* Removes all default margins that browsers add around the body */
+  margin: 0;
+  /* Sets the primary font to "Inter"; falls back to the system's default UI font, then any sans-serif */
+  font-family: 'Inter', system-ui, sans-serif;
+  /* Applies the dark background color from our custom properties */
+  background: var(--bg-dark);
+  /* Creates two decorative radial gradient "blobs" for visual atmosphere:
+     - A purple glow in the lower-left area (15% from left, 50% from top)
+     - A cyan glow in the upper-right area (85% from left, 30% from top) */
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(123, 44, 191, 0.15), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(69, 243, 255, 0.1), transparent 25%);
+  /* Sets the default text color for all content on the page */
+  color: var(--text);
+  /* Ensures the body is at least as tall as the full browser window */
+  min-height: 100vh;
+}
+
+/* 
+ * App Container — The outermost wrapper for the entire application.
+ * Uses flexbox in column direction: header on top, content below.
+ */
+.app-container {
+  /* Enables flexbox layout for arranging children (header + content) vertically */
+  display: flex;
+  /* Stacks children vertically — header first, then main content */
+  flex-direction: column;
+  /* Makes the container exactly the height of the browser viewport */
+  height: 100vh;
+}
+
+/* 
+ * Main Content — The scrollable area below the header that holds the current view
+ * (Dashboard, Tutorial, or Lab). Takes up all remaining vertical space.
+ */
+.main-content {
+  /* flex: 1 makes this element expand to fill all remaining space after the header */
+  flex: 1;
+  /* Enables scrolling when the content is taller than the available space */
+  overflow: auto;
+  /* Adds 2rem (32px) of padding around the content for comfortable spacing */
+  padding: 2rem;
+}
+
+/* =========================================================================
+   GLASSMORPHISM UTILITIES
+   Reusable classes that create the frosted-glass visual effect.
+   These can be applied to any element to give it a translucent, blurred look.
+   ========================================================================= */
+
+/* 
+ * Glass Panel — A multi-purpose frosted-glass card/container.
+ * Combines a semi-transparent background with backdrop blur for the glass effect.
+ */
+.glass-panel {
+  /* Semi-transparent background lets content behind show through faintly */
+  background: var(--glass-bg);
+  /* Blurs whatever is behind this element by 12px, creating the frosted glass effect */
+  backdrop-filter: blur(12px);
+  /* A subtle border to define the panel's edges against the dark background */
+  border: 1px solid var(--glass-border);
+  /* Rounds the corners by 12px for a smooth, modern card appearance */
+  border-radius: 12px;
+  /* A large, soft shadow to create depth and make the panel appear elevated */
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* 
+ * Glass Header — Applies glassmorphism to the header bar.
+ * More opaque than regular glass panels since the header needs to be prominent.
+ */
+.glass-header {
+  /* A dark, mostly-opaque background (80% opacity) for the header bar */
+  background: rgba(15, 17, 26, 0.8);
+  /* Blurs content behind the header for a frosted appearance */
+  backdrop-filter: blur(12px);
+  /* A thin border at the bottom to visually separate the header from page content */
+  border-bottom: 1px solid var(--glass-border);
+}
+
+/* =========================================================================
+   HEADER
+   The global navigation bar at the top of the application.
+   Contains the app title/logo on the left and navigation links on the right.
+   ========================================================================= */
+
+/* 
+ * Global Header — The main top navigation bar container.
+ * Uses flexbox to arrange the title and nav links on opposite sides.
+ */
+.global-header {
+  /* Enables flexbox layout for horizontal arrangement */
+  display: flex;
+  /* Pushes the title to the left and navigation to the right */
+  justify-content: space-between;
+  /* Vertically centers all elements in the header */
+  align-items: center;
+  /* Adds 1rem (16px) vertical and 2rem (32px) horizontal padding */
+  padding: 1rem 2rem;
+  /* Ensures the header sits above all other content when elements overlap */
+  z-index: 10;
+}
+
+/* 
+ * Global Header Title — The <h1> application name.
+ * Uses a gradient text effect where the text itself shows a color gradient.
+ */
+.global-header h1 {
+  /* Removes any default margin on the heading */
+  margin: 0;
+  /* Sets the title size to 1.5rem (24px) for visual prominence */
+  font-size: 1.5rem;
+  /* Bold weight (700) makes the title stand out */
+  font-weight: 700;
+  /* Creates a horizontal gradient from cyan to purple as the text's "fill" */
+  background: linear-gradient(to right, var(--primary), var(--secondary));
+  /* Clips the gradient background to only show within the text characters (WebKit prefix) */
+  -webkit-background-clip: text;
+  /* Makes the actual text color transparent so the gradient behind it shows through */
+  color: transparent;
+}
+
+/* 
+ * Badge — A small label element (e.g., "BETA") shown next to the app title.
+ * Uses the primary cyan color with dark text for high contrast.
+ */
+.badge {
+  /* Small text size (0.7rem ≈ 11px) since badges contain short, supplementary text */
+  font-size: 0.7rem;
+  /* Solid cyan background to make the badge highly visible */
+  background: var(--primary);
+  /* Dark text on the bright badge for maximum readability/contrast */
+  color: var(--bg-dark);
+  /* Compact padding: 0.2rem (≈3px) vertical, 0.4rem (≈6px) horizontal */
+  padding: 0.2rem 0.4rem;
+  /* Slightly rounded corners (4px) for a tag/label appearance */
+  border-radius: 4px;
+  /* Aligns the badge vertically with the middle of the title text */
+  vertical-align: middle;
+  /* Adds 0.5rem (8px) of space between the title and the badge */
+  margin-left: 0.5rem;
+}
+
+/* 
+ * Navigation List — The <ul> inside the <nav> element.
+ * Removes default list styling and arranges links horizontally.
+ */
+nav ul {
+  /* Arranges list items in a horizontal row */
+  display: flex;
+  /* Removes default bullet points from the unordered list */
+  list-style: none;
+  /* Adds 2rem (32px) of space between each navigation link */
+  gap: 2rem;
+  /* Removes any default top/bottom margin on the list */
+  margin: 0;
+  /* Removes any default left padding that browsers add to lists */
+  padding: 0;
+}
+
+/* 
+ * Navigation Links — Styles both <a> links and <span> elements inside nav items.
+ * Provides a consistent, clickable appearance for all navigation items.
+ */
+nav ul li a, nav ul li span {
+  /* Uses the muted gray color for inactive/unselected nav items */
+  color: var(--text-muted);
+  /* Removes the default underline from anchor links */
+  text-decoration: none;
+  /* Shows a pointer cursor to indicate these elements are clickable */
+  cursor: pointer;
+  /* Smoothly animates color changes when hovering or selecting */
+  transition: color 0.3s;
+}
+
+/* 
+ * Active Navigation Item — Highlights the currently active/selected page tab.
+ * Both <a> and <span> inside an active <li> get the highlighted style.
+ */
+nav ul li.active a, nav ul li.active span {
+  /* Bright cyan text to clearly indicate this is the current page */
+  color: var(--primary);
+  /* Semi-bold weight to make the active item more visually prominent */
+  font-weight: 600;
+}
+
+/* =========================================================================
+   DASHBOARD
+   The main landing page view that shows an overview of all learning modules.
+   Contains a header with progress info and a grid of module cards.
+   ========================================================================= */
+
+/* 
+ * Dashboard Container — Centers the dashboard content with a maximum width
+ * so it doesn't stretch too wide on large monitors.
+ */
+.dashboard-container {
+  /* Limits the dashboard width to 1200px for optimal reading/layout on wide screens */
+  max-width: 1200px;
+  /* Centers the dashboard horizontally by setting left and right margins to auto */
+  margin: 0 auto;
+}
+
+/* 
+ * Dashboard Header — The top section of the dashboard showing the welcome
+ * message on the left and progress overview on the right.
+ */
+.dashboard-header {
+  /* Adds 2rem (32px) of inner padding on all sides */
+  padding: 2rem;
+  /* Adds 2rem of space below the header before the module grid */
+  margin-bottom: 2rem;
+  /* Enables flexbox for side-by-side layout of title and progress */
+  display: flex;
+  /* Pushes the title to the left and the progress bar to the right */
+  justify-content: space-between;
+  /* Vertically centers the title and progress bar */
+  align-items: center;
+}
+
+/* 
+ * Dashboard Header Title — Removes default margin from the <h2> heading.
+ */
+.dashboard-header h2 {
+  /* Removes the default margin that browsers add to heading elements */
+  margin: 0;
+}
+
+/* 
+ * Progress Overview — A container on the right side of the dashboard header
+ * that shows the user's overall course progress percentage and bar.
+ */
+.progress-overview {
+  /* Aligns the progress text and bar to the right side */
+  text-align: right;
+  /* Fixes the width to 300px so it doesn't change size with content */
+  width: 300px;
+}
+
+/* 
+ * Progress Bar — The background track of the progress indicator.
+ * A thin horizontal bar that the progress-fill sits inside of.
+ */
+.progress-bar {
+  /* A subtle white background (10% opacity) for the empty/unfilled portion */
+  background: rgba(255,255,255,0.1);
+  /* 8px tall — thin enough to be sleek but visible enough to see progress */
+  height: 8px;
+  /* Fully rounded ends (4px radius on an 8px tall bar = pill shape) */
+  border-radius: 4px;
+  /* Adds 0.5rem (8px) of space above the bar, below the percentage text */
+  margin-top: 0.5rem;
+  /* Hides the fill element's corners that would extend beyond the rounded track */
+  overflow: hidden;
+}
+
+/* 
+ * Progress Fill — The colored portion of the progress bar that shows how much
+ * of the course has been completed. Its width is set dynamically via JavaScript.
+ */
+.progress-fill {
+  /* Bright green fill to indicate positive progress/completion */
+  background: var(--success);
+  /* Fills the full height of the progress bar track */
+  height: 100%;
+  /* Smoothly animates width changes (e.g., when completing a module) over 0.5 seconds */
+  transition: width 0.5s ease;
+}
+
+/* 
+ * Module Grid — A responsive grid layout that displays the module cards.
+ * Uses CSS Grid with auto-fill to create as many columns as will fit.
+ */
+.module-grid {
+  /* Enables CSS Grid layout */
+  display: grid;
+  /* Creates columns that are at least 300px wide and grow to fill available space.
+     auto-fill creates as many columns as will fit in the container width. */
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  /* Adds 1.5rem (24px) of space between each card in both rows and columns */
+  gap: 1.5rem;
+}
+
+/* 
+ * Module Card — An individual card representing one learning module.
+ * Shows the module name, description, and status. Clickable to enter the module.
+ */
+.module-card {
+  /* Inner padding of 1.5rem (24px) for comfortable content spacing */
+  padding: 1.5rem;
+  /* Enables flexbox for vertical stacking of card content */
+  display: flex;
+  /* Stacks the header, description, and footer vertically */
+  flex-direction: column;
+  /* Smoothly animates the hover lift and shadow effects over 0.3 seconds */
+  transition: transform 0.3s, box-shadow 0.3s;
+  /* Pointer cursor shows that the card is clickable */
+  cursor: pointer;
+}
+
+/* 
+ * Module Card Hover — When hovering over a card, it lifts up and gains
+ * a cyan-tinted glow to indicate interactivity.
+ */
+.module-card:hover {
+  /* Moves the card 5px upward for a "floating" effect */
+  transform: translateY(-5px);
+  /* Adds a large cyan-tinted shadow below the card for a glowing hover effect */
+  box-shadow: 0 12px 40px 0 rgba(69, 243, 255, 0.2);
+  /* Changes the border to a more visible cyan to highlight the card */
+  border-color: rgba(69, 243, 255, 0.3);
+}
+
+/* 
+ * Locked Module Card — A module that the user hasn't unlocked yet.
+ * Appears faded and grayed-out to indicate it's not accessible.
+ */
+.module-card.locked {
+  /* Reduces overall opacity to 60% to make the card look faded */
+  opacity: 0.6;
+  /* Shows a "not allowed" cursor since the card can't be clicked */
+  cursor: not-allowed;
+  /* Removes all color saturation, making the card appear fully gray */
+  filter: grayscale(1);
+}
+
+/* 
+ * Locked Module Card Hover — Prevents hover effects on locked cards
+ * so users don't think they can interact with them.
+ */
+.module-card.locked:hover {
+  /* Cancels the lift effect — locked cards stay in place on hover */
+  transform: none;
+  /* Removes the glow shadow — locked cards don't glow on hover */
+  box-shadow: none;
+}
+
+/* 
+ * Completed Module Card — A module the user has finished.
+ * Has a green border to indicate completion/success.
+ */
+.module-card.completed {
+  /* A green-tinted border (30% opacity) to signal that this module is done */
+  border-color: rgba(0, 255, 136, 0.3);
+}
+
+/* 
+ * Card Header — The top row of a module card, containing the title and status icon.
+ * Uses flexbox to space them apart horizontally.
+ */
+.card-header {
+  /* Enables flexbox layout */
+  display: flex;
+  /* Pushes the title to the left and the icon to the right */
+  justify-content: space-between;
+  /* Vertically centers the title and icon */
+  align-items: center;
+}
+
+/* 
+ * Card Header Title — The <h3> module name inside each card.
+ */
+.card-header h3 {
+  /* Removes default margin from the heading */
+  margin: 0;
+  /* Sets the module name to 1.2rem (≈19px) for prominence within the card */
+  font-size: 1.2rem;
+}
+
+/* 
+ * Module Card Description — The <p> paragraph inside each module card
+ * that describes what the module covers.
+ */
+.module-card p {
+  /* Uses the muted gray color for the description text (less prominent than the title) */
+  color: var(--text-muted);
+  /* flex: 1 makes the description expand to fill available space,
+     pushing the footer to the bottom of the card */
+  flex: 1;
+}
+
+/* 
+ * Card Footer — The bottom row of a module card, showing the estimated time
+ * and a status indicator or button.
+ */
+.card-footer {
+  /* Enables flexbox layout */
+  display: flex;
+  /* Pushes the time estimate to the left and the button/status to the right */
+  justify-content: space-between;
+  /* Vertically centers the footer elements */
+  align-items: center;
+  /* Adds 1rem (16px) of space above the footer, separating it from the description */
+  margin-top: 1rem;
+}
+
+/* 
+ * Estimated Hours — Small text showing how long a module is expected to take.
+ */
+.est-hours {
+  /* Smaller text size (0.85rem ≈ 13.6px) since this is supplementary information */
+  font-size: 0.85rem;
+  /* Muted gray color to keep it subtle and non-distracting */
+  color: var(--text-muted);
+}
+
+/* =========================================================================
+   TUTORIAL VIEW
+   The reading view where users study theory and explanations before coding.
+   Displays markdown content in a centered, readable layout.
+   ========================================================================= */
+
+/* 
+ * Tutorial Container — Centers the tutorial content with a max width
+ * for optimal readability (lines of text shouldn't be too wide).
+ */
+.tutorial-container {
+  /* Limits width to 800px — the ideal width for comfortable reading of long text */
+  max-width: 800px;
+  /* Centers the container horizontally on the page */
+  margin: 0 auto;
+}
+
+/* 
+ * Tutorial Header — The top section with a back button and module title.
+ * Uses flexbox to arrange elements horizontally with spacing.
+ */
+.tutorial-header {
+  /* Enables flexbox for horizontal layout */
+  display: flex;
+  /* Vertically centers the back button and title */
+  align-items: center;
+  /* Adds 1.5rem (24px) of space between the back button and the title */
+  gap: 1.5rem;
+  /* Adds 1rem (16px) of vertical padding above and below */
+  padding: 1rem 0;
+  /* Transparent background — the header blends with the page background */
+  background: transparent;
+  /* Removes any border (overriding any inherited styles) */
+  border: none;
+}
+
+/* 
+ * Tutorial Header Title — The <h1> module/lesson title in the tutorial view.
+ */
+.tutorial-header h1 {
+  /* Removes default heading margin */
+  margin: 0;
+  /* flex: 1 makes the title take up all remaining space after the back button */
+  flex: 1;
+}
+
+/* 
+ * Back Button — A simple button that navigates the user back to the dashboard
+ * or previous view. Styled as a subtle, unobtrusive action.
+ */
+.back-btn {
+  /* Subtle semi-transparent white background (10% opacity) */
+  background: rgba(255,255,255,0.1);
+  /* Removes the default button border */
+  border: none;
+  /* Uses the main text color for the button label */
+  color: var(--text);
+  /* Comfortable padding for a good click target: 0.5rem vertical, 1rem horizontal */
+  padding: 0.5rem 1rem;
+  /* Slightly rounded corners (6px) for a modern button appearance */
+  border-radius: 6px;
+  /* Pointer cursor to indicate the button is clickable */
+  cursor: pointer;
+  /* Smoothly animates the background color change on hover over 0.3 seconds */
+  transition: background 0.3s;
+}
+
+/* 
+ * Back Button Hover — Increases the background opacity when hovered
+ * to provide visual feedback that the button is interactive.
+ */
+.back-btn:hover {
+  /* Doubles the background opacity (10% → 20%) for a visible hover effect */
+  background: rgba(255,255,255,0.2);
+}
+
+/* 
+ * Tutorial Content — The main area where the markdown lesson content is rendered.
+ * Has generous padding for comfortable reading.
+ */
+.tutorial-content {
+  /* Large padding (2.5rem = 40px) for spacious, comfortable reading */
+  padding: 2.5rem;
+  /* Adds 2rem (32px) of space below the content before the footer */
+  margin-bottom: 2rem;
+}
+
+/* =========================================================================
+   MARKDOWN STYLES
+   Custom styles for rendered markdown content (tutorial lessons).
+   Override defaults to match the dark theme and improve readability.
+   ========================================================================= */
+
+/* 
+ * Markdown Body — The container wrapping all rendered markdown content.
+ * Sets the base text color and generous line height for reading comfort.
+ */
+.markdown-body {
+  /* Uses the main text color for all markdown content */
+  color: var(--text);
+  /* 1.7× line height provides generous spacing between lines for easy reading */
+  line-height: 1.7;
+}
+
+/* 
+ * Markdown Headings (h1, h2, h3) — Adds a bottom border and consistent spacing
+ * to create visual separation between content sections.
+ */
+.markdown-body h1, .markdown-body h2, .markdown-body h3 {
+  /* A thin divider line below each heading to separate sections visually */
+  border-bottom: 1px solid var(--glass-border);
+  /* Adds 0.5rem (8px) of padding between the heading text and the border line */
+  padding-bottom: 0.5rem;
+  /* Adds 2rem (32px) of space above each heading to separate from previous content */
+  margin-top: 2rem;
+}
+
+/* 
+ * Inline Code — Small code snippets that appear within regular text (e.g., `variable`).
+ * Styled with a dark background and monospace font to distinguish from prose.
+ */
+.markdown-body code {
+  /* A dark semi-transparent background to make inline code stand out from text */
+  background: rgba(0,0,0,0.4);
+  /* Small padding around the code text: 0.2rem vertical, 0.4rem horizontal */
+  padding: 0.2rem 0.4rem;
+  /* Slightly rounded corners for a smooth, pill-like appearance */
+  border-radius: 4px;
+  /* Monospace font so code characters are evenly spaced and look like real code */
+  font-family: 'Fira Code', monospace;
+  /* Cyan color to make inline code pop against the surrounding white text */
+  color: var(--primary);
+}
+
+/* 
+ * Code Inside Pre Blocks — When code is inside a <pre> (code block), we reset
+ * the inline code styling since the <pre> element handles the background itself.
+ */
+.markdown-body pre code {
+  /* Transparent background since the parent <pre> provides the background */
+  background: transparent;
+  /* Inherits the color from the parent instead of using the cyan inline style */
+  color: inherit;
+  /* Removes the inline code padding since the <pre> block has its own padding */
+  padding: 0;
+}
+
+/* 
+ * Code Blocks (Pre) — Multi-line code blocks for longer code examples.
+ * Dark background with a border and horizontal scrolling for wide code.
+ */
+.markdown-body pre {
+  /* Dark semi-transparent background to distinguish code blocks from text */
+  background: rgba(0,0,0,0.4);
+  /* Generous padding (1rem = 16px) inside the code block */
+  padding: 1rem;
+  /* Rounded corners for a modern card-like code block appearance */
+  border-radius: 8px;
+  /* A subtle border to define the code block's edges */
+  border: 1px solid var(--glass-border);
+  /* Enables horizontal scrolling when code lines are wider than the container */
+  overflow-x: auto;
+}
+
+/* 
+ * Blockquotes — Styled as callout boxes with a cyan left border.
+ * Used for important notes, tips, or highlighted information in tutorials.
+ */
+.markdown-body blockquote {
+  /* A thick cyan left border creates a visual "callout" indicator */
+  border-left: 4px solid var(--primary);
+  /* Removes default blockquote margins */
+  margin: 0;
+  /* Adds inner padding for comfortable spacing of the quoted text */
+  padding: 1rem;
+  /* A very subtle cyan-tinted background to distinguish from regular text */
+  background: rgba(69, 243, 255, 0.05);
+  /* Rounded corners on the right side (left is flat due to the border) */
+  border-radius: 0 8px 8px 0;
+}
+
+/* 
+ * Tutorial Footer — The bottom section of the tutorial view.
+ * Contains the "Start Coding" button to transition to the lab.
+ */
+.tutorial-footer {
+  /* Adds 2rem (32px) of padding on all sides */
+  padding: 2rem;
+  /* Centers the button horizontally */
+  text-align: center;
+}
+
+/* 
+ * Start Coding Button — A prominent call-to-action button that takes the user
+ * from the tutorial reading view to the hands-on coding lab.
+ */
+.start-coding-btn {
+  /* A vivid diagonal gradient from cyan to purple for maximum visual impact */
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  /* Removes the default browser button border */
+  border: none;
+  /* White text for high contrast against the gradient background */
+  color: white;
+  /* Large, comfortable padding: 1rem (16px) vertical, 2rem (32px) horizontal */
+  padding: 1rem 2rem;
+  /* Larger text (1.1rem ≈ 17.6px) to make the CTA button stand out */
+  font-size: 1.1rem;
+  /* Semi-bold weight for emphasis */
+  font-weight: 600;
+  /* Rounded corners (8px) matching other buttons in the app */
+  border-radius: 8px;
+  /* Pointer cursor to indicate it's clickable */
+  cursor: pointer;
+  /* Adds 1rem of space above the button */
+  margin-top: 1rem;
+  /* Smoothly animates the lift and glow effects over 0.2 seconds */
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+/* 
+ * Start Coding Button Hover — Lifts the button and adds a glow on hover
+ * to encourage the user to click.
+ */
+.start-coding-btn:hover {
+  /* Moves the button 2px upward to create a "floating" hover effect */
+  transform: translateY(-2px);
+  /* Adds a large cyan glow/shadow behind the button for visual emphasis */
+  box-shadow: 0 8px 24px rgba(69, 243, 255, 0.4);
+}
+
+/* =========================================================================
+   LAB VIEW
+   The hands-on coding workspace with a code editor, output terminal,
+   and circuit diagram panel. Uses flexbox for a flexible layout.
+   ========================================================================= */
+
+/* 
+ * Lab Layout — The top-level container for the lab view.
+ * Uses flexbox in column direction to stack the header and workspace.
+ */
+.lab-layout {
+  /* Enables flexbox for vertical stacking */
+  display: flex;
+  /* Stacks children vertically: lab header on top, workspace below */
+  flex-direction: column;
+  /* Allows the layout to grow as tall as needed */
+  min-height: 100%;
+}
+
+/* 
+ * Lab Header — The top bar of the lab view with the lesson title
+ * and action buttons (language select, review, run).
+ */
+.lab-header {
+  /* Enables flexbox for horizontal arrangement */
+  display: flex;
+  /* Pushes the title to the left and buttons to the right */
+  justify-content: space-between;
+  /* Vertically centers all elements */
+  align-items: center;
+  /* Adds padding: 1rem vertical, 2rem horizontal */
+  padding: 1rem 2rem;
+  /* Adds 1rem of space below the header before the workspace */
+  margin-bottom: 1rem;
+  /* Rounded corners matching the glass panel style */
+  border-radius: 12px;
+}
+
+/* 
+ * Lab Header Title — The <h2> lesson name in the lab header.
+ */
+.lab-header h2 {
+  /* Removes default heading margin */
+  margin: 0;
+}
+
+/* 
+ * Header Actions — Container for the action buttons in the lab header.
+ * Arranges buttons in a horizontal row with spacing.
+ */
+.header-actions {
+  /* Enables flexbox for horizontal layout */
+  display: flex;
+  /* Adds 1rem (16px) of space between each button */
+  gap: 1rem;
+}
+
+/* 
+ * Language Select — Dropdown for choosing the programming language/framework.
+ * Styled to match the dark glass aesthetic.
+ */
+.lang-select {
+  /* Semi-transparent dark background for the dropdown */
+  background: rgba(0, 0, 0, 0.5);
+  /* A subtle border matching the glass design system */
+  border: 1px solid var(--glass-border);
+  /* White text for readability */
+  color: white;
+  /* Inner padding: 0.5rem vertical, 1rem horizontal */
+  padding: 0.5rem 1rem;
+  /* Slightly rounded corners */
+  border-radius: 6px;
+  /* Removes the default focus outline ring */
+  outline: none;
+}
+
+/* 
+ * Review & Run Buttons — Shared base styles for both action buttons.
+ * Removes default border and adds consistent padding, rounding, and transitions.
+ */
+.review-btn, .run-btn {
+  /* Removes the default button border */
+  border: none;
+  /* Comfortable padding: 0.5rem vertical, 1.5rem horizontal */
+  padding: 0.5rem 1.5rem;
+  /* Rounded corners matching other interactive elements */
+  border-radius: 6px;
+  /* Semi-bold text for button labels */
+  font-weight: 600;
+  /* Pointer cursor for clickability */
+  cursor: pointer;
+  /* Smoothly animates brightness changes on hover */
+  transition: filter 0.3s;
+}
+
+/* 
+ * Review Button — The AI code review button.
+ * Uses a purple/accent color to associate it with AI features.
+ */
+.review-btn {
+  /* Semi-transparent purple background (80% opacity) */
+  background: rgba(123, 44, 191, 0.8);
+  /* White text for contrast against the purple background */
+  color: white;
+}
+
+/* 
+ * Run Button — The code execution button.
+ * Uses the green success color to indicate a positive "go" action.
+ */
+.run-btn {
+  /* Bright green background indicating "run" / "go" */
+  background: var(--success);
+  /* Black text for strong contrast against the bright green */
+  color: #000;
+}
+
+/* 
+ * Review & Run Buttons Hover — Increases brightness on hover
+ * for visual feedback on both buttons.
+ */
+.review-btn:hover, .run-btn:hover {
+  /* Makes the button 20% brighter on hover for a noticeable but subtle effect */
+  filter: brightness(1.2);
+}
+
+/* 
+ * Review & Run Buttons Disabled — Fades and disables interaction
+ * when the buttons are not available.
+ */
+.review-btn:disabled, .run-btn:disabled {
+  /* Reduces opacity to 50% to make the button look grayed out */
+  opacity: 0.5;
+  /* Shows a "not allowed" cursor to indicate the button can't be clicked */
+  cursor: not-allowed;
+}
+
+/* 
+ * Lab Workspace — The main working area containing the code editor and output panels.
+ * Uses flexbox to arrange the editor and output side by side.
+ */
+.lab-workspace {
+  /* Enables flexbox for horizontal layout */
+  display: flex;
+  /* Adds 1rem (16px) of space between the editor and output panels */
+  gap: 1rem;
+  /* flex: 1 makes the workspace expand to fill all remaining vertical space */
+  flex: 1;
+}
+
+/* 
+ * Editor Section (Lab View) — The code editor panel in the lab workspace.
+ * Gets 1.5× the space compared to the output panel (flex: 1.5 vs flex: 1).
+ */
+.editor-section {
+  /* Takes up 1.5 parts of the available space (editor is wider than output) */
+  flex: 1.5;
+  /* We remove overflow: hidden so it can grow */
+}
+
+/* 
+ * Output Section (Lab View) — The panel showing code output, diagrams, and feedback.
+ * Gets 1× the space compared to the editor's 1.5× (narrower than editor).
+ */
+.output-section {
+  /* Takes up 1 part of the available space */
+  flex: 1;
+  /* Enables flexbox for vertical stacking of output sub-panels */
+  display: flex;
+  /* Stacks output panels vertically (terminal, diagram, etc.) */
+  flex-direction: column;
+}
+
+/* 
+ * Panels Container — Holds the stacked panels (circuit diagram and terminal)
+ * inside the output section.
+ */
+.panels-container {
+  /* Enables flexbox for vertical stacking */
+  display: flex;
+  /* Stacks panels vertically */
+  flex-direction: column;
+  /* Adds 1rem (16px) of space between each panel */
+  gap: 1rem;
+  /* Adds 1rem (16px) of inner padding around all panels */
+  padding: 1rem;
+}
+
+/* 
+ * Panel — An individual output panel (e.g., circuit diagram or terminal).
+ * Each panel shares equal vertical space within the panels container.
+ */
+.panel {
+  /* flex: 1 distributes space equally among all panels */
+  flex: 1;
+  /* Enables flexbox for the panel's own content */
+  display: flex;
+  /* Stacks panel content vertically (heading + content area) */
+  flex-direction: column;
+}
+
+/* 
+ * Panel Heading — The <h3> title inside each panel (e.g., "Circuit Diagram", "Output").
+ */
+.panel h3 {
+  /* Custom margin: 0 on top and sides, 1rem on bottom for spacing before content */
+  margin: 0 0 1rem 0;
+  /* Standard 1rem (16px) heading size */
+  font-size: 1rem;
+  /* Muted gray color to serve as a subtle section label */
+  color: var(--text-muted);
+}
+
+/* 
+ * Diagram Container & Terminal — Shared styles for both the circuit diagram
+ * display area and the terminal output area. Both use monospace font and
+ * a dark background.
+ */
+.diagram-container, .terminal {
+  /* flex: 1 makes them expand to fill available space in their panel */
+  flex: 1;
+  /* Dark semi-transparent background for a terminal/code-display feel */
+  background: rgba(0, 0, 0, 0.4);
+  /* Rounded corners for a modern appearance */
+  border-radius: 8px;
+  /* Inner padding so content doesn't touch the edges */
+  padding: 1rem;
+  /* Monospace font for code and circuit diagram rendering */
+  font-family: 'Fira Code', monospace;
+  /* Standard monospace text size */
+  font-size: 0.9rem;
+}
+
+/* 
+ * Placeholder Text — Shown when a panel has no content (e.g., "Run code to see output").
+ * Styled to look obviously non-functional / informational.
+ */
+.placeholder-text {
+  /* Muted gray color to indicate this is placeholder, not real output */
+  color: var(--text-muted);
+  /* Italic styling visually distinguishes placeholder from actual content */
+  font-style: italic;
+}
+
+/* 
+ * Circuit Diagram Text — The rendered quantum circuit diagram text.
+ * Uses the cyan primary color for the circuit visualization.
+ */
+.circuit-diagram {
+  /* Cyan color makes the circuit diagram visually striking and thematic */
+  color: var(--primary);
+  /* Removes any default margin from the pre/code element */
+  margin: 0;
+}
+
+/* 
+ * AI Feedback — A callout box displaying AI-generated code review comments.
+ * Has a purple accent to visually connect it to the AI/mentor feature.
+ */
+.ai-feedback {
+  /* A subtle purple-tinted background (10% opacity) */
+  background: rgba(123, 44, 191, 0.1);
+  /* A thick purple left border creating a visual "callout" or "quote" indicator */
+  border-left: 3px solid var(--secondary);
+  /* Inner padding: 0.5rem vertical, 1rem horizontal for comfortable spacing */
+  padding: 0.5rem 1rem;
+  /* Adds 1rem of space below the feedback box before the next element */
+  margin-bottom: 1rem;
+}
+
+/* 
+ * Output Text — The actual program output displayed in the terminal.
+ * Uses the green success color to mimic a traditional terminal output.
+ */
+.output-text {
+  /* Green text color mimicking classic terminal/console output */
+  color: var(--success);
+  /* Removes any default margin from the paragraph element */
+  margin: 0;
+}
+/* OVERRIDING FOR BETTER LAB UI UX AND WIDER TUTORIAL */
+.tutorial-container {
+  max-width: 1000px !important;
+}
+
+.lab-workspace {
+  gap: 2rem !important;
+}
+
+.editor-section {
+  flex: 1 !important;
+}
+
+.output-section {
+  flex: 1.2 !important;
+}
+
+.circuit-diagram {
+  white-space: pre !important; 
+  font-size: 1.2rem !important;
+}
+
+.diagram-container {
+}
+.diagram-container::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.diagram-container::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 4px;
+}
+.diagram-container::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.2);
+}
+
+.visualizer-panel {
+  flex: 2 !important;
+}
+
+.terminal-panel {
+  flex: 1 !important;
+}

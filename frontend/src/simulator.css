@@ -1,0 +1,605 @@
+/* 
+ * SIMULATOR.CSS — Quantum Simulator Component Styles
+ * This file styles the interactive quantum simulator that appears within tutorials.
+ * It includes:
+ *   - The mini simulator container (the overall simulator card)
+ *   - A 3D Bloch sphere with CSS animation (a visual representation of a qubit's state)
+ *   - Circuit wire visualization (horizontal wires with gates and photon pulses)
+ *   - Interactive gate control buttons (H, X, Z, Reset)
+ */
+
+/* =========================================================================
+   MINI SIMULATOR STYLES
+   The main container for the interactive quantum simulator widget.
+   It appears inline within tutorial content to let users experiment.
+   ========================================================================= */
+
+/* 
+ * Mini Simulator — The outer card/container for the entire simulator widget.
+ * Uses a dark, slightly transparent background with a subtle inset shadow
+ * to make it look recessed/embedded in the page.
+ */
+.mini-simulator {
+  /* A dark, semi-transparent background (70% opacity) that creates depth */
+  background: rgba(10, 15, 30, 0.7);
+  /* A thin semi-transparent border matching the glass design system */
+  border: 1px solid var(--glass-border);
+  /* Rounded corners (12px) for a smooth, modern card appearance */
+  border-radius: 12px;
+  /* Inner padding of 1.5rem (24px) on all sides for comfortable spacing */
+  padding: 1.5rem;
+  /* Vertical margin of 2rem (32px) above and below to separate from tutorial text */
+  margin: 2rem 0;
+  /* An inward shadow that makes the simulator look "sunken" or "embedded" into the page */
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+  /* Enables flexbox for centering the simulator's child elements */
+  display: flex;
+  /* Stacks children vertically (metadata, sphere/circuit, caption, buttons) */
+  flex-direction: column;
+  /* Centers all children horizontally within the simulator card */
+  align-items: center;
+}
+
+/* 
+ * Error State — When the simulator encounters an error, the border and text
+ * turn red to visually indicate something went wrong.
+ */
+.mini-simulator.error {
+  /* Changes the border to the danger/red color to signal an error */
+  border-color: var(--danger);
+  /* Changes the text color to red so error messages are immediately visible */
+  color: var(--danger);
+}
+
+/* 
+ * Bloch Meta — A metadata bar at the top of the simulator showing the title
+ * (e.g., "Bloch Sphere") and state information. Spans the full width with
+ * a bottom border to separate it from the visualization below.
+ */
+.bloch-meta {
+  /* Takes up the full width of the simulator container */
+  width: 100%;
+  /* Enables flexbox for horizontal layout of title and state info */
+  display: flex;
+  /* Pushes the title to the left and state info to the right */
+  justify-content: space-between;
+  /* Vertically centers the title and state text */
+  align-items: center;
+  /* Adds 2rem (32px) of space below before the sphere/circuit visualization */
+  margin-bottom: 2rem;
+  /* A thin divider line at the bottom separating metadata from the visualization */
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  /* Small padding below the text before the border line */
+  padding-bottom: 0.5rem;
+}
+
+/* 
+ * Bloch Meta Heading — The <h4> title inside the metadata bar.
+ * Displays the simulator type name (e.g., "Bloch Sphere Simulator").
+ */
+.bloch-meta h4 {
+  /* Removes default heading margin */
+  margin: 0;
+  /* Uses the main text color for readability */
+  color: var(--text);
+}
+
+/* 
+ * Caption — A small italic text below the visualization explaining what the
+ * user is seeing (e.g., "Click a gate to see the qubit state change").
+ */
+.caption {
+  /* Slightly smaller text (0.85rem ≈ 13.6px) since captions are supplementary */
+  font-size: 0.85rem;
+  /* Muted gray color to keep the caption unobtrusive */
+  color: var(--text-muted);
+  /* Adds 2rem of space above, separating the caption from the visualization */
+  margin-top: 2rem;
+  /* Italic styling to visually distinguish captions from regular content */
+  font-style: italic;
+  /* Centers the caption text horizontally */
+  text-align: center;
+}
+
+/* =========================================================================
+   3D BLOCH SPHERE ANIMATION
+   The Bloch sphere is a geometric representation of a qubit's quantum state.
+   This section creates a 3D sphere using CSS transforms and perspective,
+   with rotation animation and a state vector pointing to the current state.
+   ========================================================================= */
+
+/* 
+ * Sphere Container — The outer wrapper that establishes the 3D perspective.
+ * Perspective creates the illusion of depth, making the sphere look 3D.
+ */
+.sphere-container {
+  /* Fixed width of 200px for the sphere's bounding box */
+  width: 200px;
+  /* Fixed height of 200px (square) to contain the circular sphere */
+  height: 200px;
+  /* Sets the 3D perspective distance to 800px — higher values create less dramatic
+     perspective distortion; 800px gives a natural, subtle 3D effect */
+  perspective: 800px;
+  /* Vertical margin of 20px above and below the sphere */
+  margin: 20px 0;
+}
+
+/* 
+ * Sphere — The actual sphere element styled as a circle with 3D transform support.
+ * Uses CSS border and shadows to create a glowing, semi-transparent globe.
+ */
+.sphere {
+  /* Takes up the full width of its container (200px) */
+  width: 100%;
+  /* Takes up the full height of its container (200px) */
+  height: 100%;
+  /* Allows this element to be positioned as a reference point for child elements */
+  position: relative;
+  /* Enables 3D rendering for child elements — without this, children would be flat */
+  transform-style: preserve-3d;
+  /* Makes the element perfectly circular (50% radius on a square = circle) */
+  border-radius: 50%;
+  /* A semi-transparent cyan border to outline the sphere */
+  border: 2px solid rgba(69, 243, 255, 0.3);
+  /* Two layered shadows:
+     - Inset shadow: a cyan glow inside the sphere for a volumetric/lit look
+     - Outer shadow: a subtle cyan glow around the sphere's edges */
+  box-shadow: 
+    inset 0 0 40px rgba(69, 243, 255, 0.2),
+    0 0 20px rgba(69, 243, 255, 0.1);
+}
+
+/* 
+ * Animated Sphere — When the 'animate-spin' class is applied, the sphere
+ * rotates continuously around its Y-axis, creating a spinning globe effect.
+ */
+.sphere.animate-spin {
+  /* Applies the 'spinSphere' keyframe animation:
+     - Duration: 8 seconds per full rotation
+     - Runs infinitely (never stops)
+     - Linear timing: constant speed throughout (no ease in/out) */
+  animation: spinSphere 8s infinite linear;
+}
+
+/* 
+ * Spin Sphere Keyframes — Defines the rotation animation for the Bloch sphere.
+ * The sphere tilts 20° forward (rotateX) and spins 360° around the Y-axis.
+ */
+@keyframes spinSphere {
+  /* Starting position: tilted 20° forward, no Y rotation yet */
+  from { transform: rotateX(20deg) rotateY(0deg); }
+  /* Ending position: same 20° tilt, but rotated a full 360° around Y-axis.
+     Since from→to goes 0→360, the sphere completes one full spin. */
+  to { transform: rotateX(20deg) rotateY(360deg); }
+}
+
+/* 
+ * Sphere Guide Lines — The equator and axis lines (X, Y, Z) that appear
+ * on the Bloch sphere to help visualize orientation. All share common
+ * positioning and styling as dashed circular outlines.
+ */
+.equator, .axis-x, .axis-y, .axis-z {
+  /* All guides are absolutely positioned within the sphere */
+  position: absolute;
+  /* Stretches each guide to fill the entire sphere (all sides at 0) */
+  top: 0; left: 0; right: 0; bottom: 0;
+  /* A dashed white border (20% opacity) creating the guide circle outline */
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  /* Makes each guide a perfect circle */
+  border-radius: 50%;
+}
+
+/* 
+ * Equator — The horizontal ring around the "middle" of the sphere.
+ * Rotated 90° around the X-axis to lie flat (horizontal plane).
+ */
+.equator { transform: rotateX(90deg); }
+
+/* 
+ * X-Axis Ring — A vertical ring rotated 90° around the Y-axis.
+ * Represents the X-axis plane of the Bloch sphere.
+ */
+.axis-x { transform: rotateY(90deg); }
+
+/* 
+ * Z-Axis Line — A vertical line through the center of the sphere (north-south pole).
+ * Unlike the circular rings, this is a straight dashed line created using only a left border.
+ */
+.axis-z {
+  /* Removes the circular border inherited from the shared selector */
+  border: none;
+  /* A single dashed line on the left side, slightly more visible (40% opacity) */
+  border-left: 1px dashed rgba(255,255,255,0.4);
+  /* Positions the line at the horizontal center of the sphere */
+  left: 50%;
+  /* Removes the circular shape — this should be a straight vertical line, not a circle */
+  border-radius: 0;
+}
+
+/* 
+ * State Vector — The arrow/line that points from the center of the Bloch sphere
+ * to the current quantum state on the sphere's surface. Its rotation is
+ * controlled by JavaScript based on the qubit's state.
+ */
+.vector {
+  /* Positioned absolutely within the sphere element */
+  position: absolute;
+  /* Starts at the vertical center of the sphere */
+  top: 50%;
+  /* Starts at the horizontal center of the sphere */
+  left: 50%;
+  /* Width of 4px for the vector line (thin but visible) */
+  width: 4px;
+  /* Length of 100px — extends from the center to near the sphere's edge */
+  height: 100px;
+  /* Bright cyan color for the vector, making it stand out against the sphere */
+  background: var(--primary);
+  /* The rotation pivot point is at the top-center of the vector, so it rotates
+     from the sphere's center outward */
+  transform-origin: top center;
+  /* Shifts the vector 2px left to center the 4px-wide line on the center point */
+  margin-left: -2px;
+  /* Smoothly animates rotation changes over 1 second with a custom easing curve
+     that starts fast, slows down, then finishes smoothly (cubic-bezier) */
+  transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+  /* A cyan glow around the vector line for a glowing/energy effect */
+  box-shadow: 0 0 10px var(--primary);
+}
+
+/* 
+ * Vector Head (Arrowhead) — A triangular arrowhead at the tip of the state vector.
+ * Created using the CSS "border trick" where a zero-width/height element with
+ * colored borders forms a triangle shape.
+ */
+.vector-head {
+  /* Positioned absolutely at the end of the vector line */
+  position: absolute;
+  /* Places the arrowhead 10px below the bottom of the vector line */
+  bottom: -10px;
+  /* Shifts the arrowhead 8px to the left to center it on the 4px-wide vector */
+  left: -8px;
+  /* Zero width — the triangle shape comes entirely from the borders */
+  width: 0;
+  /* Zero height — the triangle shape comes entirely from the borders */
+  height: 0;
+  /* Transparent left border forms the left side of the triangle */
+  border-left: 10px solid transparent;
+  /* Transparent right border forms the right side of the triangle */
+  border-right: 10px solid transparent;
+  /* Solid cyan bottom border forms the base/visible part of the triangle */
+  border-bottom: 15px solid var(--primary);
+  /* Rotates the triangle 180° so the point faces outward (away from sphere center) */
+  transform: rotate(180deg);
+}
+
+/* =========================================================================
+   CIRCUIT DEMO STYLES
+   Styles for the quantum circuit wire visualization that shows qubits
+   as horizontal wires with gates (squares) positioned along them and
+   photon pulses (glowing dots) traveling through the circuit.
+   ========================================================================= */
+
+/* 
+ * Circuit Wire Container — The wrapper for a single qubit wire line.
+ * Contains the wire label (e.g., "|0⟩"), the wire itself, gates, and pulses.
+ */
+.circuit-wire-container {
+  /* Enables absolute positioning for child elements (gates, pulses) */
+  position: relative;
+  /* Takes up the full width of the simulator */
+  width: 100%;
+  /* Fixed height of 100px to provide space for the wire, gates, and labels */
+  height: 100px;
+  /* Enables flexbox to align the label and wire horizontally */
+  display: flex;
+  /* Vertically centers the label and wire within the 100px height */
+  align-items: center;
+}
+
+/* 
+ * Wire Label — The text label at the left end of each circuit wire.
+ * Shows the qubit's initial state (e.g., "|0⟩").
+ */
+.wire-label {
+  /* Monospace font for proper quantum notation rendering */
+  font-family: 'Fira Code', monospace;
+  /* Bold weight to make the label clearly visible */
+  font-weight: bold;
+  /* Cyan color matching the primary theme */
+  color: var(--primary);
+  /* Adds 15px of space between the label and the wire */
+  margin-right: 15px;
+  /* Larger text (1.2rem ≈ 19px) for readability of the quantum state notation */
+  font-size: 1.2rem;
+}
+
+/* 
+ * Wire — The horizontal line representing a qubit's quantum wire.
+ * A thin, subtle line that gates and pulses are positioned along.
+ */
+.wire {
+  /* Enables absolute positioning for child elements (gates, pulses) placed ON the wire */
+  position: relative;
+  /* flex: 1 makes the wire stretch to fill all remaining horizontal space after the label */
+  flex: 1;
+  /* 4px tall — thin enough to look like a wire but visible enough to see */
+  height: 4px;
+  /* A subtle white line (10% opacity) — dim enough to let gates stand out */
+  background: rgba(255, 255, 255, 0.1);
+  /* Slightly rounded ends for a smooth wire appearance */
+  border-radius: 2px;
+}
+
+/* 
+ * Photon Pulse — A glowing dot that travels along the circuit wire,
+ * representing a quantum state/photon moving through the circuit.
+ * Its horizontal position (left) is controlled by JavaScript.
+ */
+.photon-pulse {
+  /* Absolutely positioned on the wire so its left position can be animated */
+  position: absolute;
+  /* Positioned 8px above the wire center to vertically center the 20px dot on the 4px wire */
+  top: -8px;
+  /* 20px diameter dot */
+  width: 20px;
+  /* 20px diameter dot (square that becomes circular with border-radius) */
+  height: 20px;
+  /* Bright green color for the pulse dot */
+  background: var(--success);
+  /* Makes the square element a perfect circle */
+  border-radius: 50%;
+  /* Two layered green glowing shadows creating an intense "energy" effect:
+     - First shadow: 15px spread for the inner glow
+     - Second shadow: 30px spread for the outer, softer glow */
+  box-shadow: 0 0 15px var(--success), 0 0 30px var(--success);
+  /* Smoothly animates horizontal movement (left) over 0.5s with ease-in-out,
+     and opacity changes over 0.3s for appear/disappear effects */
+  transition: left 0.5s ease-in-out, opacity 0.3s;
+}
+
+/* 
+ * Circuit Gate — A square box positioned on the wire representing a quantum gate
+ * (e.g., Hadamard "H", Pauli-X "X", Pauli-Z "Z"). Shows the gate's symbol inside.
+ */
+.circuit-gate {
+  /* Absolutely positioned on the wire at a specific horizontal location */
+  position: absolute;
+  /* Positioned at the vertical center of the wire container */
+  top: 50%;
+  /* Centers the gate both horizontally and vertically on its position point.
+     translate(-50%, -50%) shifts the element back by half its own width and height. */
+  transform: translate(-50%, -50%);
+  /* Fixed 50px width for the gate box */
+  width: 50px;
+  /* Fixed 50px height for the gate box (square shape) */
+  height: 50px;
+  /* Purple background matching the secondary/AI accent color */
+  background: rgba(123, 44, 191, 0.8);
+  /* A solid purple border to define the gate's edges */
+  border: 2px solid var(--secondary);
+  /* Rounded corners (8px) for a modern button-like appearance */
+  border-radius: 8px;
+  /* Enables flexbox for centering the gate symbol text inside the box */
+  display: flex;
+  /* Horizontally centers the gate symbol (e.g., "H") */
+  justify-content: center;
+  /* Vertically centers the gate symbol */
+  align-items: center;
+  /* Bold text for the gate symbol */
+  font-weight: bold;
+  /* Larger text (1.2rem) so the single-character gate symbol is clearly readable */
+  font-size: 1.2rem;
+  /* Monospace font for consistent character width in gate labels */
+  font-family: 'Fira Code', monospace;
+  /* Smoothly animates all property changes (active pulse effect) over 0.3 seconds */
+  transition: all 0.3s;
+  /* A dark shadow below the gate to make it appear elevated above the wire */
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+/* 
+ * Active Pulse Gate — When the photon/pulse is passing through a gate, the gate
+ * lights up with this style: changes color, adds a glow, and scales up slightly.
+ */
+.circuit-gate.active-pulse {
+  /* Changes the gate background to bright cyan (from purple) */
+  background: var(--primary);
+  /* Changes the border to white for contrast against the cyan background */
+  border-color: #fff;
+  /* Changes the text to black for readability against the bright background */
+  color: #000;
+  /* Adds a large cyan glow around the gate for a "powered up" visual effect */
+  box-shadow: 0 0 20px var(--primary);
+  /* Scales the gate to 110% size while maintaining the centering transform.
+     This creates a brief "pulse" or "pop" effect when the gate activates. */
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+/* =========================================================================
+   GATE CONTROLS
+   Interactive buttons that let users apply quantum gates to the simulator.
+   Each button represents a different quantum operation (H, X, Z, Reset).
+   ========================================================================= */
+
+/* 
+ * Simulator Controls — The container for the row of gate control buttons.
+ * Positioned below the circuit/sphere visualization.
+ */
+.simulator-controls {
+  /* Adds 1.5rem (24px) of space above the buttons, separating from the visualization */
+  margin-top: 1.5rem;
+  /* Ensures buttons appear above any overlapping elements */
+  z-index: 10;
+}
+
+/* 
+ * Gate Button — Individual buttons for applying quantum gates.
+ * Styled as semi-transparent outlined buttons with a frosted glass effect.
+ */
+.gate-btn {
+  /* Semi-transparent white background (10% opacity) for a subtle, glassy look */
+  background: rgba(255, 255, 255, 0.1);
+  /* A cyan border using the primary color (with fallback to #45f3ff if variable is undefined) */
+  border: 1px solid var(--primary-color, #45f3ff);
+  /* White text for the gate label (e.g., "H", "X", "Z") */
+  color: #fff;
+  /* Comfortable padding: 0.5rem (8px) vertical, 1rem (16px) horizontal */
+  padding: 0.5rem 1rem;
+  /* Rounded corners (8px) matching other interactive elements */
+  border-radius: 8px;
+  /* Monospace font for the gate symbol labels */
+  font-family: 'Fira Code', monospace;
+  /* Bold text to make the single-character gate labels clearly visible */
+  font-weight: bold;
+  /* Pointer cursor to indicate the button is clickable */
+  cursor: pointer;
+  /* Smoothly animates all hover effects (background, shadow, position) over 0.3 seconds */
+  transition: all 0.3s ease;
+  /* Blurs content behind the button by 5px for a subtle frosted glass effect */
+  backdrop-filter: blur(5px);
+}
+
+/* 
+ * Gate Button Hover — When hovering over a gate button (only if not disabled),
+ * it gains a cyan tint, a glow, and lifts up slightly.
+ * The :not(:disabled) ensures disabled buttons don't show hover effects.
+ */
+.gate-btn:hover:not(:disabled) {
+  /* Adds a cyan-tinted background (20% opacity) on hover */
+  background: rgba(69, 243, 255, 0.2);
+  /* Adds a soft cyan glow around the button */
+  box-shadow: 0 0 10px rgba(69, 243, 255, 0.5);
+  /* Lifts the button 2px upward for an interactive "press me" effect */
+  transform: translateY(-2px);
+}
+
+/* 
+ * Gate Button Active (Click) — When the button is actively being pressed/clicked,
+ * it returns to its original position to create a "push down" tactile feel.
+ * Only applies when not disabled.
+ */
+.gate-btn:active:not(:disabled) {
+  /* Resets the button position back to 0 (no vertical shift) when pressed down */
+  transform: translateY(0);
+}
+
+/* 
+ * Gate Button Disabled — When the button is disabled (e.g., during animation),
+ * it appears faded with a muted border and shows a "not allowed" cursor.
+ */
+.gate-btn:disabled {
+  /* Reduces the button to 50% opacity, making it look grayed out */
+  opacity: 0.5;
+  /* Shows a "not allowed" cursor (circle with a line through it) */
+  cursor: not-allowed;
+  /* Changes the border to a very subtle white (20% opacity) to look inactive */
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* 
+ * Reset Button — A special variant of the gate button used for the "Reset" action.
+ * Uses a red/danger color instead of cyan to indicate a destructive/reset action.
+ */
+.gate-btn.reset-btn {
+  /* Red border using the danger color (with fallback to #ff4545 if variable is undefined) */
+  border-color: var(--danger, #ff4545);
+}
+
+/* 
+ * Reset Button Hover — When hovering over the reset button, it gains a red tint
+ * and a red glow instead of the cyan used for other gate buttons.
+ */
+.gate-btn.reset-btn:hover {
+  /* Red-tinted background (20% opacity) matching the danger/reset theme */
+  background: rgba(255, 69, 69, 0.2);
+  /* A soft red glow around the button to reinforce the "danger/reset" intent */
+  box-shadow: 0 0 10px rgba(255, 69, 69, 0.5);
+}
+/* PREMIUM UI ENHANCEMENTS */
+.mini-simulator {
+  background: linear-gradient(135deg, rgba(10, 15, 30, 0.8), rgba(25, 15, 45, 0.9));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(69, 243, 255, 0.2);
+  box-shadow: 0 10px 30px -10px rgba(69, 243, 255, 0.3), inset 0 0 20px rgba(0,0,0,0.8);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.mini-simulator:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 40px -10px rgba(69, 243, 255, 0.4), inset 0 0 20px rgba(0,0,0,0.8);
+}
+
+.gate-btn {
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  position: relative;
+}
+
+.gate-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
+}
+
+.gate-btn:active::after {
+  width: 200px;
+  height: 200px;
+  opacity: 0;
+  transition: 0s;
+}
+
+.badge {
+  background: linear-gradient(90deg, var(--primary-color, #45f3ff), var(--secondary, #7b2cbf));
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 0 10px rgba(69, 243, 255, 0.5);
+  animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+  0% { box-shadow: 0 0 10px rgba(69, 243, 255, 0.5); }
+  50% { box-shadow: 0 0 20px rgba(123, 44, 191, 0.8); }
+  100% { box-shadow: 0 0 10px rgba(69, 243, 255, 0.5); }
+}
+
+input[type=range] {
+  -webkit-appearance: none;
+  background: transparent;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: var(--primary-color, #45f3ff);
+  cursor: pointer;
+  margin-top: -8px;
+  box-shadow: 0 0 15px var(--primary-color, #45f3ff);
+  transition: transform 0.2s;
+}
+
+input[type=range]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+input[type=range]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 4px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}

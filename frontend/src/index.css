@@ -1,0 +1,874 @@
+/* 
+ * INDEX.CSS — Global Styles & Layout
+ * This file defines the foundational styles for the entire QuantumEdge application.
+ * It includes CSS custom properties (design tokens), reset styles, the glassmorphism
+ * design system, header navigation, sidebar skill tree, code editor area,
+ * and the output/terminal panel.
+ */
+
+/* Import the "Inter" font (weights 300, 400, 600, 800) for UI text and "Fira Code"
+   for monospace/code display from Google Fonts. The 'display=swap' parameter means
+   the browser will show fallback text immediately and swap to the custom font once loaded. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Fira+Code&display=swap');
+
+/* 
+ * :root — CSS Custom Properties (Design Tokens)
+ * The :root selector targets the top-level <html> element. Variables defined here
+ * are accessible everywhere in the stylesheet via var(--name). This makes it easy
+ * to change colors in one place and have them update across the entire app.
+ */
+:root {
+  /* The main dark background color used behind all content */
+  --bg-color: #0b0c10;
+  /* A semi-transparent dark color used as the background for glass-effect panels */
+  --glass-bg: rgba(31, 33, 40, 0.6);
+  /* A very subtle white border used on glass panels to create a frosted edge */
+  --glass-border: rgba(255, 255, 255, 0.08);
+  /* The primary accent color — a bright cyan/aqua used for highlights and interactive elements */
+  --primary-color: #45f3ff;
+  /* The secondary accent color — a vibrant purple used for gradients and accents */
+  --accent-color: #7b2cbf;
+  /* The main text color — pure white for maximum readability on dark backgrounds */
+  --text-primary: #ffffff;
+  /* A muted/dimmed text color — a light gray used for secondary or less important text */
+  --text-secondary: #a0a5b1;
+  /* A bright green color used to indicate success states (e.g., completed tasks, passing output) */
+  --success-color: #00ff88;
+}
+
+/* 
+ * Universal Reset — The * (asterisk) selector targets EVERY element on the page.
+ * This removes default browser spacing and ensures consistent sizing behavior.
+ */
+* {
+  /* Makes padding and border included in the element's total width/height,
+     so a 100px-wide box stays 100px even if you add padding or border */
+  box-sizing: border-box;
+  /* Removes all default outer spacing (margins) that browsers add to elements like <p>, <h1>, etc. */
+  margin: 0;
+  /* Removes all default inner spacing (padding) that browsers add to elements like <ul>, <body>, etc. */
+  padding: 0;
+}
+
+/* 
+ * Body — Styles for the <body> element, which wraps all visible page content.
+ * Sets the global font, dark background with decorative gradient blobs, and locks
+ * the viewport so the page itself doesn't scroll (individual panels scroll instead).
+ */
+body {
+  /* Sets the primary font to "Inter"; falls back to any sans-serif font if Inter isn't available */
+  font-family: 'Inter', sans-serif;
+  /* Applies the dark background color defined in our custom properties */
+  background-color: var(--bg-color);
+  /* Creates two soft, circular gradient "blobs" layered on top of the background color:
+     - First blob: a purple glow positioned 15% from left, 50% from top
+     - Second blob: a cyan glow positioned 85% from left, 30% from top
+     These add visual depth and a futuristic atmosphere without any images. */
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(123, 44, 191, 0.15), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(69, 243, 255, 0.1), transparent 25%);
+  /* Sets the default text color for the entire page to white */
+  color: var(--text-primary);
+  /* Makes the body exactly as tall as the browser window (viewport height) */
+  height: 100vh;
+  /* Prevents the body from scrolling — content overflow is handled by inner containers */
+  overflow: hidden;
+}
+
+/* 
+ * App Container — The top-level wrapper that holds the header and main content area.
+ * Uses flexbox in a vertical (column) direction so the header sits on top and
+ * content fills the remaining space.
+ */
+.app-container {
+  /* Enables flexbox layout, allowing child elements to be arranged in a row or column */
+  display: flex;
+  /* Stacks child elements vertically (top to bottom) instead of the default horizontal */
+  flex-direction: column;
+  /* Makes this container exactly the height of the browser window */
+  height: 100vh;
+}
+
+/* =========================================================================
+   GLASSMORPHISM UTILITIES
+   Glassmorphism is a modern design trend that makes panels look like frosted
+   glass — semi-transparent backgrounds with a blur effect behind them.
+   ========================================================================= */
+
+/* 
+ * Glass Panel — A reusable class that gives any element a frosted-glass appearance.
+ * Apply this class to any container that should look like a translucent card.
+ */
+.glass-panel {
+  /* Sets a semi-transparent dark background so content behind it is partially visible */
+  background: var(--glass-bg);
+  /* Blurs whatever is behind this element by 12 pixels, creating the frosted glass effect */
+  backdrop-filter: blur(12px);
+  /* Same blur effect but for Safari browsers, which require the -webkit- prefix */
+  -webkit-backdrop-filter: blur(12px);
+  /* Adds a subtle white border to define the panel's edges against the dark background */
+  border: 1px solid var(--glass-border);
+  /* Rounds the corners of the panel by 16 pixels for a soft, modern look */
+  border-radius: 16px;
+  /* Adds a large, soft shadow behind the panel to make it appear elevated/floating */
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* =========================================================================
+   HEADER
+   The top navigation bar that contains the app title/logo and navigation links.
+   It uses glassmorphism styling to stay visually consistent with the design system.
+   ========================================================================= */
+
+/* 
+ * Glass Header — The main top bar of the application.
+ * Uses flexbox to position the title on the left and navigation on the right.
+ */
+.glass-header {
+  /* Enables flexbox layout for arranging child elements horizontally */
+  display: flex;
+  /* Pushes children to opposite ends — title on the left, nav on the right */
+  justify-content: space-between;
+  /* Vertically centers all children so text and links align nicely */
+  align-items: center;
+  /* Adds 1rem (16px) of vertical padding and 2rem (32px) of horizontal padding inside the header */
+  padding: 1rem 2rem;
+  /* A near-opaque dark background that's slightly transparent */
+  background: rgba(11, 12, 16, 0.8);
+  /* Blurs content behind the header by 10px for a frosted glass look when scrolling */
+  backdrop-filter: blur(10px);
+  /* A thin semi-transparent line at the bottom to visually separate the header from content */
+  border-bottom: 1px solid var(--glass-border);
+  /* Ensures the header stays on top of other content (higher z-index = closer to the viewer) */
+  z-index: 10;
+}
+
+/* 
+ * Header Title — Styles the <h1> element inside the glass header.
+ * This is the app name "QuantumEdge" displayed in the top-left.
+ */
+.glass-header h1 {
+  /* Sets the font size to 1.5rem (24px) — large enough to be prominent but not overwhelming */
+  font-size: 1.5rem;
+  /* Extra-bold weight (800) makes the title stand out as the primary branding element */
+  font-weight: 800;
+  /* Slightly tightens the spacing between letters for a modern, compact look */
+  letter-spacing: -0.5px;
+  /* Makes the h1 a flex container so the title text and badge can sit side by side */
+  display: flex;
+  /* Vertically aligns the title text and the badge in the center */
+  align-items: center;
+  /* Adds 0.5rem (8px) of space between the title text and the badge */
+  gap: 0.5rem;
+}
+
+/* 
+ * Badge — A small pill-shaped label (e.g., "BETA", "v2") displayed next to the title.
+ * It uses a gradient background to stand out visually.
+ */
+.badge {
+  /* Small font size (0.7rem ≈ 11px) since badges contain short text */
+  font-size: 0.7rem;
+  /* A diagonal gradient from purple (accent) to cyan (primary) for a vibrant look */
+  background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+  /* Minimal padding: 2px top/bottom, 8px left/right to keep the badge compact */
+  padding: 2px 8px;
+  /* Fully rounded corners (pill shape) with a 12px border radius */
+  border-radius: 12px;
+  /* Semi-bold text weight for readability at small sizes */
+  font-weight: 600;
+  /* Converts the badge text to ALL CAPS for a label-like appearance */
+  text-transform: uppercase;
+}
+
+/* 
+ * Navigation List — Removes default bullet points from the <ul> inside <nav>
+ * and arranges the list items horizontally with spacing between them.
+ */
+nav ul {
+  /* Removes the default bullet points/disc markers from the unordered list */
+  list-style: none;
+  /* Arranges list items in a horizontal row instead of a vertical stack */
+  display: flex;
+  /* Adds 2rem (32px) of space between each navigation link */
+  gap: 2rem;
+}
+
+/* 
+ * Navigation Items — Each <li> in the nav represents a clickable page link.
+ * Styled to look like text links with hover effects.
+ */
+nav li {
+  /* Uses the muted/gray text color so inactive links don't compete with the active one */
+  color: var(--text-secondary);
+  /* Semi-bold weight makes the links readable without being too heavy */
+  font-weight: 600;
+  /* Changes the mouse cursor to a pointing hand to indicate these are clickable */
+  cursor: pointer;
+  /* Smoothly animates the color change over 0.3 seconds when hovering */
+  transition: color 0.3s ease;
+}
+
+/* 
+ * Navigation Hover State — When the user hovers their mouse over a nav item,
+ * it changes to the bright cyan primary color to provide visual feedback.
+ */
+nav li:hover {
+  /* Changes the text color to bright cyan on hover */
+  color: var(--primary-color);
+}
+
+/* 
+ * Active Navigation Item — The currently selected/active page link.
+ * It's highlighted with white text and an underline in the primary color.
+ */
+nav li.active {
+  /* White text makes the active item stand out from the gray inactive items */
+  color: var(--text-primary);
+  /* A 2px solid cyan line under the text to clearly indicate the current page */
+  border-bottom: 2px solid var(--primary-color);
+}
+
+/* =========================================================================
+   MAIN LAYOUT
+   The primary three-column grid layout that divides the page into:
+   1. Left sidebar (skill tree) — 280px wide
+   2. Center (code editor) — takes remaining space
+   3. Right panel (output/diagrams) — 380px wide
+   ========================================================================= */
+
+/* 
+ * Lab Container — The main content area below the header.
+ * Uses CSS Grid to create a responsive three-column layout.
+ */
+.lab-container {
+  /* Enables CSS Grid layout for precise column and row control */
+  display: grid;
+  /* Defines three columns: fixed 280px sidebar, flexible center, fixed 380px right panel */
+  grid-template-columns: 280px 1fr 380px;
+  /* Adds 1.5rem (24px) of space between each column and row */
+  gap: 1.5rem;
+  /* Adds 1.5rem (24px) of padding around the entire grid container */
+  padding: 1.5rem;
+  /* Fills the remaining viewport height after subtracting the ~70px header */
+  height: calc(100vh - 70px);
+}
+
+/* 
+ * Skill Tree Scroll — A scrollable container for the list of skill/lesson nodes
+ * in the left sidebar. Allows vertical scrolling when there are many items.
+ */
+.skill-tree-scroll {
+  /* Enables vertical scrolling when content exceeds the container's height */
+  overflow-y: auto;
+  /* Takes up all available remaining space in its flex parent */
+  flex: 1;
+  /* Makes this a flex container with vertical stacking for its children */
+  display: flex;
+  /* Stacks the skill nodes vertically (top to bottom) */
+  flex-direction: column;
+  /* Adds 0.8rem (≈13px) of space between each skill node */
+  gap: 0.8rem;
+  /* Adds a small right padding so content doesn't touch the scrollbar */
+  padding-right: 0.5rem;
+}
+
+/* 
+ * Custom Scrollbar Track — Styles the scrollbar inside the skill tree container.
+ * The ::-webkit-scrollbar pseudo-element targets the scrollbar itself (WebKit browsers).
+ */
+.skill-tree-scroll::-webkit-scrollbar {
+  /* Makes the scrollbar narrow (6px) for a sleek, minimal look */
+  width: 6px;
+}
+
+/* 
+ * Custom Scrollbar Thumb — Styles the draggable part of the scrollbar.
+ * The "thumb" is the piece you grab and drag to scroll.
+ */
+.skill-tree-scroll::-webkit-scrollbar-thumb {
+  /* Uses the semi-transparent border color for a subtle scrollbar that doesn't distract */
+  background: var(--glass-border);
+  /* Rounds the scrollbar thumb's corners for a modern appearance */
+  border-radius: 4px;
+}
+
+/* 
+ * Header Actions — A flex container for the buttons/controls in the header
+ * (e.g., language selector dropdown, run button).
+ */
+.header-actions {
+  /* Arranges child buttons/controls in a horizontal row */
+  display: flex;
+  /* Adds 1rem (16px) of space between each action button */
+  gap: 1rem;
+}
+
+/* 
+ * Language Select Dropdown — A styled <select> element that lets users
+ * pick their preferred programming language (e.g., Python, Qiskit).
+ */
+.lang-select {
+  /* Very subtle white background (5% opacity) to slightly distinguish from the header */
+  background: rgba(255, 255, 255, 0.05);
+  /* White text color so the selected option is readable on the dark background */
+  color: var(--text-primary);
+  /* A thin semi-transparent border matching the glass design system */
+  border: 1px solid var(--glass-border);
+  /* Inner spacing of 0.6rem (≈10px) so the text doesn't touch the edges */
+  padding: 0.6rem;
+  /* Moderately rounded corners (8px) for consistency with other UI elements */
+  border-radius: 8px;
+  /* Uses the Inter font to match the rest of the application */
+  font-family: 'Inter', sans-serif;
+  /* Removes the default blue focus outline that browsers add */
+  outline: none;
+  /* Shows a pointer cursor to indicate this is an interactive element */
+  cursor: pointer;
+}
+
+/* 
+ * Language Select Options — Styles the individual <option> elements inside
+ * the dropdown menu when it's expanded.
+ */
+.lang-select option {
+  /* Solid dark background for each option in the dropdown list */
+  background: var(--bg-color);
+  /* White text for readability against the dark dropdown background */
+  color: var(--text-primary);
+}
+
+/* =========================================================================
+   SIDEBAR / SKILL TREE
+   The left column containing a list of lessons/topics organized as a skill tree.
+   Each lesson is a clickable "node" with different states: completed, active, locked.
+   ========================================================================= */
+
+/* 
+ * Sidebar — The left-side panel containing the skill tree navigation.
+ * Uses flexbox to stack its heading and content vertically with consistent spacing.
+ */
+.sidebar {
+  /* Adds 1.5rem (24px) of inner padding on all sides */
+  padding: 1.5rem;
+  /* Makes this a flex container for vertical layout */
+  display: flex;
+  /* Stacks children vertically (heading on top, nodes below) */
+  flex-direction: column;
+  /* Adds 1rem (16px) of space between the heading and the first node */
+  gap: 1rem;
+}
+
+/* 
+ * Sidebar Heading — The title above the skill tree (e.g., "Skill Tree").
+ * Uses a smaller font and muted color since it's a section label, not a page title.
+ */
+.sidebar h2 {
+  /* Slightly larger than body text (1.1rem ≈ 17.6px) for a subtle heading size */
+  font-size: 1.1rem;
+  /* Adds 1rem (16px) of space below the heading before the first node */
+  margin-bottom: 1rem;
+  /* Uses the muted gray color so the heading doesn't overpower the node list */
+  color: var(--text-secondary);
+}
+
+/* 
+ * Node — A single lesson/topic item in the skill tree.
+ * Each node is a clickable card that represents one lesson.
+ * Different CSS classes (completed, active, locked) change its appearance.
+ */
+.node {
+  /* Adds 1rem (16px) of inner padding so the text doesn't touch the edges */
+  padding: 1rem;
+  /* Rounds the corners by 12px for a soft card-like appearance */
+  border-radius: 12px;
+  /* Semi-bold text for readability and emphasis */
+  font-weight: 600;
+  /* Slightly smaller than default text (0.9rem ≈ 14.4px) to fit more items */
+  font-size: 0.9rem;
+  /* Enables absolute positioning for child elements (like the lock/check icons) */
+  position: relative;
+  /* Smoothly animates the horizontal slide effect when hovered (over 0.2 seconds) */
+  transition: transform 0.2s ease;
+  /* Changes the cursor to a pointer hand to show it's clickable */
+  cursor: pointer;
+}
+
+/* 
+ * Node Hover — When the user hovers over a skill node, it slides 5px
+ * to the right to provide subtle interactive feedback.
+ */
+.node:hover {
+  /* Moves the node 5 pixels to the right for a subtle "nudge" animation */
+  transform: translateX(5px);
+}
+
+/* 
+ * Completed Node — A lesson that the user has already finished.
+ * Styled with a green tint to indicate success/completion.
+ */
+.node.completed {
+  /* A very subtle green-tinted background (10% opacity) */
+  background: rgba(0, 255, 136, 0.1);
+  /* A slightly more visible green border (20% opacity) to define the card edges */
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  /* Green text color matching the success color to reinforce "completed" status */
+  color: var(--success-color);
+}
+
+/* 
+ * Active Node — The lesson the user is currently working on.
+ * Styled with a cyan tint and a glow effect to draw attention.
+ */
+.node.active {
+  /* A subtle cyan-tinted background (15% opacity) to highlight the current lesson */
+  background: rgba(69, 243, 255, 0.15);
+  /* A more prominent cyan border (40% opacity) to clearly outline the active node */
+  border: 1px solid rgba(69, 243, 255, 0.4);
+  /* Cyan text color to match the primary design accent */
+  color: var(--primary-color);
+  /* A soft cyan glow around the node to make it stand out from neighboring items */
+  box-shadow: 0 0 15px rgba(69, 243, 255, 0.2);
+}
+
+/* 
+ * Locked Node — A lesson that the user cannot access yet (prerequisites not met).
+ * Styled with a dim, washed-out appearance to indicate unavailability.
+ */
+.node.locked {
+  /* A nearly invisible white background (3% opacity) — very dim and subdued */
+  background: rgba(255, 255, 255, 0.03);
+  /* Dark gray text color to make the locked node look disabled/inaccessible */
+  color: #555;
+}
+
+/* =========================================================================
+   EDITOR SECTION
+   The center column containing the code editor where users write their code.
+   It includes a header bar with controls and the editor component itself.
+   ========================================================================= */
+
+/* 
+ * Editor Section — The container for the code editing area.
+ * Uses flexbox in column direction to stack the header and editor vertically.
+ */
+.editor-section {
+  /* Enables flexbox for vertical stacking of header and editor */
+  display: flex;
+  /* Arranges children vertically: header on top, editor below */
+  flex-direction: column;
+  /* Hides any content that overflows the container boundaries */
+  overflow: hidden;
+}
+
+/* 
+ * Editor Header — The bar at the top of the editor showing the lesson title
+ * and action buttons (Run, Review). Uses flexbox to space items apart.
+ */
+.editor-header {
+  /* Arranges child elements horizontally */
+  display: flex;
+  /* Pushes the title to the left and buttons to the right */
+  justify-content: space-between;
+  /* Vertically centers the title and buttons */
+  align-items: center;
+  /* Adds 1rem vertical padding and 1.5rem horizontal padding inside the header */
+  padding: 1rem 1.5rem;
+  /* A thin line at the bottom separating the header from the code editor */
+  border-bottom: 1px solid var(--glass-border);
+}
+
+/* 
+ * Editor Header Title — The <h2> inside the editor header showing the current
+ * lesson or challenge name.
+ */
+.editor-header h2 {
+  /* Sets the title to 1.1rem (≈17.6px), consistent with other section headings */
+  font-size: 1.1rem;
+}
+
+/* 
+ * Editor Wrapper — Contains the actual code editor component (e.g., Monaco/CodeMirror).
+ * Takes up all remaining vertical space below the editor header.
+ */
+.editor-wrapper {
+  /* flex: 1 makes this element grow to fill all available remaining space */
+  flex: 1;
+  /* Ensures the editor spans the full width of its container */
+  width: 100%;
+}
+
+/* 
+ * Run Button — The primary action button that executes the user's code.
+ * Has a gradient background and a glowing shadow for visual prominence.
+ */
+.run-btn {
+  /* A diagonal gradient from purple to cyan, making the button eye-catching */
+  background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+  /* White text for maximum contrast against the colorful gradient background */
+  color: white;
+  /* Removes the default browser button border */
+  border: none;
+  /* 0.6rem (≈10px) vertical and 1.5rem (24px) horizontal padding for a comfortable click target */
+  padding: 0.6rem 1.5rem;
+  /* Moderately rounded corners (8px) for a modern button shape */
+  border-radius: 8px;
+  /* Semi-bold text for readability */
+  font-weight: 600;
+  /* Uses the Inter font to match the application's design */
+  font-family: 'Inter', sans-serif;
+  /* Pointer cursor indicates this element is clickable */
+  cursor: pointer;
+  /* Smoothly animates all property changes (hover effects) over 0.3 seconds */
+  transition: all 0.3s ease;
+  /* A soft cyan glow below/around the button to make it "pop" visually */
+  box-shadow: 0 4px 15px rgba(69, 243, 255, 0.3);
+}
+
+/* 
+ * Run Button Hover — When the user hovers over the run button, it lifts up
+ * slightly and the glow becomes more intense, inviting the user to click.
+ */
+.run-btn:hover {
+  /* Moves the button 2px upward to create a "lifting" effect */
+  transform: translateY(-2px);
+  /* Increases the glow intensity and spread for a more dramatic hover effect */
+  box-shadow: 0 6px 20px rgba(69, 243, 255, 0.4);
+}
+
+/* 
+ * Run Button Disabled — When the button is disabled (e.g., code is running),
+ * it appears faded and the cursor changes to indicate it's not clickable.
+ */
+.run-btn:disabled {
+  /* Reduces the button's visibility to 60% opacity, making it look "grayed out" */
+  opacity: 0.6;
+  /* Shows a "not allowed" cursor (circle with a line) to indicate it's disabled */
+  cursor: not-allowed;
+  /* Prevents the hover lift effect from applying when disabled */
+  transform: none;
+}
+
+/* 
+ * Review Button — A secondary action button for requesting AI code review.
+ * Uses an outlined/ghost style (transparent background with a colored border).
+ */
+.review-btn {
+  /* Semi-transparent white background for a subtle, non-competing appearance */
+  background: rgba(255, 255, 255, 0.1);
+  /* Cyan text to match the primary accent color */
+  color: var(--primary-color);
+  /* A solid cyan border giving the button an "outlined" look */
+  border: 1px solid var(--primary-color);
+  /* Inner spacing: 0.6rem vertical, 1.2rem horizontal */
+  padding: 0.6rem 1.2rem;
+  /* Rounded corners matching other buttons in the interface */
+  border-radius: 8px;
+  /* Semi-bold text for consistency */
+  font-weight: 600;
+  /* Uses the Inter font */
+  font-family: 'Inter', sans-serif;
+  /* Pointer cursor for clickability */
+  cursor: pointer;
+  /* Smoothly animates hover effects over 0.3 seconds */
+  transition: all 0.3s ease;
+}
+
+/* 
+ * Review Button Hover — Increases the background opacity to provide
+ * hover feedback without changing the overall design.
+ */
+.review-btn:hover {
+  /* A slightly more visible cyan tint on hover to show interactivity */
+  background: rgba(69, 243, 255, 0.15);
+}
+
+/* 
+ * Review Button Disabled — Reduces visibility when the button can't be used
+ * (e.g., no code written yet).
+ */
+.review-btn:disabled {
+  /* Makes the button appear 50% transparent to look grayed out */
+  opacity: 0.5;
+  /* Shows a "not allowed" cursor to indicate the button is disabled */
+  cursor: not-allowed;
+}
+
+/* =========================================================================
+   OUTPUT SECTION
+   The right-side panel that displays code execution results, circuit diagrams,
+   AI feedback, and the terminal/console output.
+   ========================================================================= */
+
+/* 
+ * Output Section — The main container for the right column.
+ * Holds the terminal, diagrams, and AI feedback.
+ */
+.output-section {
+  /* Adds 1.5rem (24px) of inner padding on all sides */
+  padding: 1.5rem;
+  /* Enables flexbox for vertical layout of child panels */
+  display: flex;
+  /* Stacks children vertically: heading, then terminal, etc. */
+  flex-direction: column;
+}
+
+/* 
+ * Output Section Heading — The title above the output area (e.g., "Output").
+ */
+.output-section h2 {
+  /* Sets heading size to 1.1rem for consistency with other section headings */
+  font-size: 1.1rem;
+  /* Adds 1rem of space below the heading before the terminal/output content */
+  margin-bottom: 1rem;
+  /* Uses the muted gray color for a section-label appearance */
+  color: var(--text-secondary);
+}
+
+/* 
+ * Terminal — A dark panel that displays code output, errors, and console messages.
+ * Styled to look like a real terminal/command-line interface.
+ */
+.terminal {
+  /* flex: 1 makes it grow to fill all available space in its flex parent */
+  flex: 1;
+  /* Pure black background to mimic a real terminal window */
+  background: #000;
+  /* Slightly rounded corners (8px) for a modern terminal appearance */
+  border-radius: 8px;
+  /* Adds 1rem (16px) of inner padding so text doesn't touch the edges */
+  padding: 1rem;
+  /* Uses the "Fira Code" monospace font — standard for code/terminal display */
+  font-family: 'Fira Code', monospace;
+  /* Slightly smaller text (0.85rem ≈ 13.6px) typical for terminal output */
+  font-size: 0.85rem;
+  /* Green text color to mimic classic terminal aesthetics */
+  color: var(--success-color);
+  /* Enables vertical scrolling when output exceeds the terminal's height */
+  overflow-y: auto;
+  /* A thin border to define the terminal's edges against the glass panel */
+  border: 1px solid var(--glass-border);
+}
+
+/* 
+ * Placeholder Text — Shown when a section has no content yet.
+ * Uses italic gray text to indicate "nothing here yet" without being distracting.
+ */
+.placeholder-text {
+  /* Dark gray color that's visible but clearly secondary/informational */
+  color: #555;
+  /* Italic styling differentiates placeholder text from real content */
+  font-style: italic;
+}
+
+/* 
+ * Info Text — Small informational messages (e.g., hints, status updates).
+ */
+.info-text {
+  /* Uses the primary cyan color to stand out as informational */
+  color: var(--primary-color);
+  /* Smaller text size (0.8rem ≈ 12.8px) since info text is supplementary */
+  font-size: 0.8rem;
+}
+
+/* 
+ * Panels Container — Holds multiple stacked panels (e.g., circuit diagram panel
+ * and terminal panel) in the right column.
+ */
+.panels-container {
+  /* Enables flexbox for stacking panels */
+  display: flex;
+  /* Stacks panels vertically */
+  flex-direction: column;
+  /* Adds 1.5rem (24px) of space between each panel */
+  gap: 1.5rem;
+  /* Takes up the full height of its parent container */
+  height: 100%;
+}
+
+/* 
+ * Panel — An individual panel within the panels container (e.g., the diagram
+ * panel or the output panel). Each panel fills equal space.
+ */
+.panel {
+  /* Enables flexbox for its own children */
+  display: flex;
+  /* Stacks its children vertically */
+  flex-direction: column;
+  /* flex: 1 makes all panels share available space equally */
+  flex: 1;
+  /* Prevents content from visually overflowing the panel boundaries */
+  overflow: hidden;
+}
+
+/* 
+ * Diagram Container — The area that displays quantum circuit diagrams.
+ * Centers its content both horizontally and vertically.
+ */
+.diagram-container {
+  /* flex: 1 makes it grow to fill all available space */
+  flex: 1;
+  /* A very subtle white background to slightly distinguish from the glass panel */
+  background: rgba(255, 255, 255, 0.05);
+  /* Rounded corners for visual consistency */
+  border-radius: 8px;
+  /* Inner padding so the diagram doesn't touch the edges */
+  padding: 1rem;
+  /* Enables flexbox for centering the diagram */
+  display: flex;
+  /* Centers the diagram horizontally */
+  justify-content: center;
+  /* Centers the diagram vertically */
+  align-items: center;
+  /* Allows scrolling if the diagram is larger than the container */
+  overflow: auto;
+  /* A thin border to define the container's edges */
+  border: 1px solid var(--glass-border);
+}
+
+/* 
+ * Circuit Diagram — The text-based circuit diagram rendered using monospace font.
+ * This displays quantum gates and wires in ASCII art style.
+ */
+.circuit-diagram {
+  /* Uses Fira Code monospace font so circuit characters align properly in a grid */
+  font-family: 'Fira Code', monospace;
+  /* Slightly larger text (1.1rem) for better readability of circuit symbols */
+  font-size: 1.1rem;
+  /* White text for the circuit diagram elements */
+  color: var(--text-primary);
+  /* 1.4× line height gives adequate spacing between circuit wire lines */
+  line-height: 1.4;
+}
+
+/* 
+ * AI Feedback — A styled callout box that displays AI-generated code review
+ * or hints. Has a purple accent to associate it with the AI/mentor feature.
+ */
+.ai-feedback {
+  /* A subtle purple-tinted background connecting it to the accent/AI color */
+  background: rgba(123, 44, 191, 0.2);
+  /* A thick purple left border creating a "callout" or "quote" effect */
+  border-left: 3px solid var(--accent-color);
+  /* Inner padding for comfortable text spacing */
+  padding: 0.8rem;
+  /* Space below the feedback box before the next element */
+  margin-bottom: 1rem;
+  /* Rounded corners on the right side only (left is flat for the border effect) */
+  border-radius: 0 4px 4px 0;
+}
+
+/* 
+ * AI Feedback Label — The bold "AI Feedback:" label at the top of the callout.
+ */
+.ai-feedback strong {
+  /* Purple color matching the accent/AI theme */
+  color: var(--accent-color);
+  /* display: block puts the label on its own line above the feedback text */
+  display: block;
+  /* Small gap between the label and the feedback paragraph */
+  margin-bottom: 0.3rem;
+}
+
+/* 
+ * AI Feedback Text — The paragraph of feedback text inside the AI callout.
+ */
+.ai-feedback p {
+  /* White text for readability */
+  color: var(--text-primary);
+  /* 1.5× line height for comfortable reading of multi-line feedback */
+  line-height: 1.5;
+}
+
+/* 
+ * Lock Icon — A small icon positioned at the right side of a locked skill node
+ * to visually indicate that the lesson is not yet available.
+ */
+.lock-icon {
+  /* Positioned relative to the nearest parent with position: relative (the .node) */
+  position: absolute;
+  /* Places the icon 1rem (16px) from the right edge of the node */
+  right: 1rem;
+  /* Makes the icon semi-transparent (50%) so it's visible but not overpowering */
+  opacity: 0.5;
+}
+
+/* 
+ * Check Icon — A small checkmark icon positioned at the right side of a
+ * completed skill node to indicate that the lesson has been finished.
+ */
+.check-icon {
+  /* Positioned relative to the nearest parent with position: relative (the .node) */
+  position: absolute;
+  /* Places the icon 1rem (16px) from the right edge of the node */
+  right: 1rem;
+  /* Green color matching the success/completion theme */
+  color: var(--success-color);
+  /* Bold weight makes the checkmark more visible and prominent */
+  font-weight: bold;
+}
+/* PREMIUM UX/UI ENHANCEMENTS */
+
+/* Animated Background Blobs */
+@keyframes pulse-blobs {
+  0% {
+    background-image: 
+      radial-gradient(circle at 15% 50%, rgba(123, 44, 191, 0.15), transparent 30%),
+      radial-gradient(circle at 85% 30%, rgba(69, 243, 255, 0.1), transparent 30%);
+  }
+  50% {
+    background-image: 
+      radial-gradient(circle at 20% 45%, rgba(123, 44, 191, 0.25), transparent 40%),
+      radial-gradient(circle at 80% 35%, rgba(69, 243, 255, 0.2), transparent 40%);
+  }
+  100% {
+    background-image: 
+      radial-gradient(circle at 15% 50%, rgba(123, 44, 191, 0.15), transparent 30%),
+      radial-gradient(circle at 85% 30%, rgba(69, 243, 255, 0.1), transparent 30%);
+  }
+}
+body {
+  animation: pulse-blobs 10s infinite ease-in-out;
+}
+
+/* Glass Panel Hover Dynamics */
+.glass-panel {
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+}
+.glass-panel:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px 0 rgba(69, 243, 255, 0.15), 0 0 20px rgba(123, 44, 191, 0.1);
+  border: 1px solid rgba(69, 243, 255, 0.3);
+}
+
+/* Enhanced Buttons */
+.run-btn {
+  position: relative;
+  overflow: hidden;
+}
+.run-btn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  transition: 0.5s;
+}
+.run-btn:hover::before {
+  left: 100%;
+}
+
+/* Custom Scrollbar for the whole app */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-color); 
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--accent-color), var(--primary-color)); 
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--primary-color), var(--accent-color)); 
+}
