@@ -2,7 +2,7 @@
 // App.tsx — Root Application Component
 // ============================================================================
 
-import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
 import Dashboard from './pages/Dashboard';
@@ -56,11 +56,11 @@ function App() {
           <h1>QuantumEdge <span className="badge">PRO</span></h1>
           <nav>
             <ul>
-              <li className={location.pathname === '/' ? 'active' : ''}>
-                <Link to="/">Dashboard</Link>
-              </li>
-              <li className={location.pathname.startsWith('/lab') ? 'active' : ''}>
+              <li className={location.pathname.startsWith('/lab') || location.pathname === '/' ? 'active' : ''}>
                 <Link to="/lab/sandbox">Lab</Link>
+              </li>
+              <li className={location.pathname === '/modules' ? 'active' : ''}>
+                <Link to="/modules">Modules</Link>
               </li>
               {user ? (
                 <li>
@@ -77,7 +77,8 @@ function App() {
         
         <main className="main-content">
           <Routes>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<Navigate to="/lab/sandbox" replace />} />
+            <Route path="/modules" element={<Dashboard />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/tutorial/:id" element={<Tutorial />} />
             <Route path="/lab/:id" element={<Lab />} />
