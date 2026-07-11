@@ -112,6 +112,20 @@ QuantumEdge is built with a scalable, distributed microservices architecture usi
 
 <br />
 
+## 📊 System Resource Requirements
+
+To run this application reliably in a production or dev environment, ensure you have the following resources:
+
+| Resource | Requirement | Details |
+|:---|:---|:---|
+| **Storage** | **~5 to 6 GB** | Base images (Mongo/Redis/Rabbit) + Custom Docker Images (C++/Python workers are ~1.4GB each). |
+| **Memory** | **1.5 GB - 2.5 GB** | Idle services consume ~830 MB. Compiling images (`docker compose up --build`) and concurrent simulation jobs will spike RAM usage up to 2.5 GB. |
+
+> [!WARNING]
+> If running on a 1GB RAM instance (like AWS `t2.micro`), **you must configure a 2GB Swap file** before running `docker compose build`, otherwise the OS will kill the build process due to Out-Of-Memory errors.
+
+<br />
+
 ## 🛡️ Rate Limiting
 
 All API endpoints are protected by Redis-backed sliding window rate limiters.

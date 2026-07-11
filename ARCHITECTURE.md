@@ -73,3 +73,29 @@ graph TD
 ### 6. Simulation Workers (Python & C++)
 - **Role:** Listen to RabbitMQ for jobs, execute them safely, and post results back to RabbitMQ.
 - **Security (Docker-in-Docker):** Workers spawn ephemeral, resource-constrained, network-disabled containers (`--network none`, `--memory 256m`) for each user job to prevent malicious code execution.
+
+## 📊 System Resource Requirements
+
+To run this application reliably, the following minimum system resources are required:
+
+### Storage (Disk Size)
+Total disk space required is **~5 to 6 GB**:
+- **Source Code:** ~10 MB
+- **Base Infrastructure Images:** MongoDB (~700MB), RabbitMQ (~250MB), Redis (~35MB)
+- **Custom Built Images:** C++ Worker (1.42GB), Python Worker (1.34GB), Frontend (767MB), API Gateway (265MB)
+
+### Memory (RAM)
+The application requires **1.5 GB to 2.5 GB of RAM**. 
+
+**Base Idle Memory (~830 MB):**
+- Frontend (Vite): ~500 MB
+- RabbitMQ: ~140 MB
+- MongoDB: ~110 MB
+- API Gateway: ~45 MB
+- Workers & Redis: ~35 MB combined
+
+**Spike Memory:**
+- **Building:** Running `docker compose up --build` uses over 1.5GB RAM due to C++ compilation (CMake) and Python package downloads.
+- **Execution:** When a user runs a simulation, the workers spawn temporary Docker containers that can consume up to 256MB of RAM per concurrent job.
+
+*(Note: When running on a 1GB RAM machine like an AWS `t2.micro`, a 2GB Swap file is mandatory to prevent Out-Of-Memory crashes during the build and execution phases).*
