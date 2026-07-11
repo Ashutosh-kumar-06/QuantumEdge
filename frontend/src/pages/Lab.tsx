@@ -4,7 +4,7 @@
 // ============================================================================
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import type { Module } from '../types';
 import '../App.css';
@@ -12,6 +12,7 @@ import { useProgress } from '../context/ProgressContext';
 import { io } from 'socket.io-client';
 import CircuitBuilder from '../components/CircuitBuilder';
 import MultiplayerChat from '../components/MultiplayerChat';
+import ProbabilityHistogram from '../components/ProbabilityHistogram';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 
@@ -205,6 +206,10 @@ export default function Lab() {
   const [language, setLanguage] = useState<'python' | 'cpp'>('python');
   const [noiseModel, setNoiseModel] = useState<'ideal' | 'depolarizing' | 'thermal'>('ideal');
   
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const projectId = searchParams.get('project');
+
   // Multiplayer Room State
   const [roomId, setRoomId] = useState<string>('');
 
@@ -261,6 +266,47 @@ export default function Lab() {
       })
       .catch(err => console.error("Error fetching curriculum", err));
   }, [id]);
+
+  // Fetch Cloud Project if URL has ?project=
+  useEffect(() => {
+    if (projectId) {
+      fetch(`${import.meta.env.VITE_API_URL}/api/projects/${projectId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.code) {
+            setCode(data.code);
+            setLanguage(data.language as 'python' | 'cpp');
+          }
+        })
+        .catch(err => console.error("Error fetching project", err));
+    }
+  }, [projectId]);
+
+  const saveProject = async () => {
+    try {
+      const userStr = localStorage.getItem('quantumEdgeUser');
+      const author = userStr ? JSON.parse(userStr).email : 'Anonymous';
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/projects`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          title: module?.title || 'Sandbox Project', 
+          code, 
+          language, 
+          author
+        })
+      });
+      const data = await response.json();
+      if (data._id) {
+        navigate(`/lab/sandbox?project=${data._id}`, { replace: true });
+        const shareUrl = window.location.origin + `/lab/sandbox?project=${data._id}`;
+        navigator.clipboard.writeText(shareUrl);
+        alert('Project saved to cloud! Shareable URL copied to clipboard.');
+      }
+    } catch (err) {
+      alert('Failed to save project.');
+    }
+  };
 
   const handleLanguageChange = (e: any) => {
     const newLang = e.target.value;
@@ -371,6 +417,10 @@ export default function Lab() {
 
           <button className="review-btn" onClick={requestAiReview} disabled={reviewLoading}>
             {reviewLoading ? 'Reviewing...' : '✨ AI Code Review'}
+          </button>
+
+          <button onClick={saveProject} style={{ background: '#444', color: '#fff', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+            ☁️ Save to Cloud
           </button>
 
           <button className="run-btn" onClick={runCode} disabled={loading}>
@@ -488,15 +538,8 @@ export default function Lab() {
                             <div className="stdout-text" style={{ marginBottom: '1rem' }}>{output.output}</div>
                           )}
                           {output.counts && (
-                            <div className="counts-text" style={{ marginTop: '0.5rem' }}>
-                              <strong style={{ color: 'var(--primary)' }}>Measurement Counts:</strong>
-                              <ul style={{ listStyleType: 'none', padding: 0, margin: '0.5rem 0' }}>
-                                {Object.entries(output.counts).map(([state, count]) => (
-                                  <li key={state} style={{ padding: '0.2rem 0' }}>
-                                    <span style={{ color: '#64ffda' }}>|{state}⟩</span> : {String(count)}
-                                  </li>
-                                ))}
-                              </ul>
+                            <div className="counts-text" style={{ marginTop: '1rem', width: '100%', maxWidth: '800px', margin: '1rem auto' }}>
+                              <ProbabilityHistogram counts={output.counts} />
                             </div>
                           )}
                           {output.error && (

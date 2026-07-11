@@ -22,6 +22,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const Course = require('./models/Course');
 const User = require('./models/User');
 const Job = require('./models/Job');
+const Project = require('./models/Project');
 
 // Middleware
 const { createRateLimiter } = require('./middleware/rateLimiter');
@@ -211,6 +212,38 @@ function getRateLimiters() {
 // ============================================================================
 // API ENDPOINTS
 // ============================================================================
+
+/**
+ * POST /api/projects
+ * Save a new cloud project
+ */
+app.post('/api/projects', async (req, res) => {
+  try {
+    const { title, code, language, author } = req.body;
+    if (!code) return res.status(400).json({ error: 'Code is required' });
+    
+    const project = new Project({ title, code, language, author });
+    await project.save();
+    
+    res.status(201).json(project);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/projects/:id
+ * Retrieve a saved project by ID
+ */
+app.get('/api/projects/:id', async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+    res.json(project);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 /**
  * GET /api/curriculum
