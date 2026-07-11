@@ -24,7 +24,7 @@ services:
 
   # The MongoDB service: our primary database for storing courses, users, and jobs
   mongodb:
-    image: mongo:latest # Use the official latest mongo image
+    image: mongo:4.4 # Use the official latest mongo image
     ports:
       - "27017:27017" # Default mongo port
     environment:
