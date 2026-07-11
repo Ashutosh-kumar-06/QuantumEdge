@@ -6,12 +6,14 @@ export default function Auth() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [mode, setMode] = useState<'login' | 'signup'>('login');
 
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Simulate login
-    localStorage.setItem('quantumEdgeUser', JSON.stringify({ email, provider: 'email' }));
+    localStorage.setItem('quantumEdgeUser', JSON.stringify({ email, username: username || email, provider: 'email' }));
     window.dispatchEvent(new Event('userStateChanged'));
     navigate('/');
   };
@@ -35,6 +37,26 @@ export default function Auth() {
         </p>
 
         <form onSubmit={handleEmailSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {mode === 'signup' && (
+            <>
+              <input 
+                type="text" 
+                placeholder="Full Name" 
+                value={name}
+                onChange={e => setName(e.target.value)}
+                required
+                style={{ padding: '0.8rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.2)', color: '#fff' }}
+              />
+              <input 
+                type="text" 
+                placeholder="Username" 
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                required
+                style={{ padding: '0.8rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.2)', color: '#fff' }}
+              />
+            </>
+          )}
           <input 
             type="email" 
             placeholder="Email Address" 
@@ -51,7 +73,7 @@ export default function Auth() {
             required
             style={{ padding: '0.8rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.2)', color: '#fff' }}
           />
-          <button className="start-btn" type="submit" style={{ width: '100%', marginTop: '0.5rem' }}>
+          <button className="start-btn" type="submit" style={{ width: '100%', marginTop: '0.5rem', borderRadius: '24px' }}>
             {mode === 'login' ? 'Sign In' : 'Sign Up'}
           </button>
         </form>
@@ -61,10 +83,10 @@ export default function Auth() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <button onClick={() => handleOAuth('google')} style={{ padding: '0.8rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.2)', background: '#fff', color: '#000', fontWeight: 'bold', cursor: 'pointer' }}>
+          <button onClick={() => handleOAuth('google')} style={{ padding: '0.8rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.2)', background: '#fff', color: '#000', fontWeight: 'bold', cursor: 'pointer' }}>
             Continue with Google
           </button>
-          <button onClick={() => handleOAuth('github')} style={{ padding: '0.8rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.2)', background: '#24292e', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
+          <button onClick={() => handleOAuth('github')} style={{ padding: '0.8rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.2)', background: '#24292e', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
             Continue with GitHub
           </button>
         </div>

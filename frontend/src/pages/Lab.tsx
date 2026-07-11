@@ -398,20 +398,31 @@ export default function Lab() {
                         </div>
                       )}
                       {output ? (
-                        <pre className="output-text">
+                        <div className="output-text" style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
                           {output.output && output.output.trim() !== '' && (
-                            <span className="stdout-text">{output.output}</span>
+                            <div className="stdout-text" style={{ marginBottom: '1rem' }}>{output.output}</div>
                           )}
                           {output.counts && (
-                            <span className="counts-text">{'\nCounts: ' + JSON.stringify(output.counts, null, 2)}</span>
+                            <div className="counts-text" style={{ marginTop: '0.5rem' }}>
+                              <strong style={{ color: 'var(--primary)' }}>Measurement Counts:</strong>
+                              <ul style={{ listStyleType: 'none', padding: 0, margin: '0.5rem 0' }}>
+                                {Object.entries(output.counts).map(([state, count]) => (
+                                  <li key={state} style={{ padding: '0.2rem 0' }}>
+                                    <span style={{ color: '#64ffda' }}>|{state}⟩</span> : {String(count)}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
                           )}
                           {output.error && (
-                            <span className="error-text">{'\nError: ' + output.error}</span>
+                            <div className="error-text" style={{ color: '#ff5555', marginTop: '0.5rem' }}>
+                              <strong>Error:</strong> {output.error}
+                            </div>
                           )}
-                          {!output.counts && !output.error && (!output.output || output.output.trim() === '') && (
-                            <span>{JSON.stringify(output, null, 2)}</span>
+                          {output.status && !output.counts && !output.error && (!output.output || output.output.trim() === '') && (
+                            <div style={{ color: '#888' }}>{output.status}</div>
                           )}
-                        </pre>
+                        </div>
                       ) : (
                         <span className="placeholder-text">Awaiting execution...</span>
                       )}
