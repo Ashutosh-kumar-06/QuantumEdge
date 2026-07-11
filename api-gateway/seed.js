@@ -3,6 +3,8 @@ const Course = require('./models/Course');
 const User = require('./models/User');
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://root:examplepassword@localhost:27017/quantumedge?authSource=admin';
+const REDIS_URL = process.env.REDIS_URL || 'redis://redis:6379';
+const { createClient } = require('redis');
 
 const curriculum = [
   {
@@ -265,6 +267,20 @@ async function seed() {
     // Save the user to the database
     await user.save();
     console.log('Test user seeded');
+    
+    // Clear Redis Cache
+    try {
+      const redisClient = createClient({ url: REDIS_URL });
+      await redisClient.connect();
+      const keys = await redisClient.keys('curriculum:*');
+      if (keys.length > 0) {
+        await redisClient.del(keys);
+        console.log(`Cleared ${keys.length} cached curriculum keys from Redis`);
+      }
+      await redisClient.disconnect();
+    } catch (e) {
+      console.log('Redis cache not cleared (is Redis running?)', e.message);
+    }
     
     process.exit(0);
   } catch (err) {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
+import { auth, googleProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from '../firebase';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -10,19 +11,40 @@ export default function Auth() {
   const [username, setUsername] = useState('');
   const [mode, setMode] = useState<'login' | 'signup'>('login');
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const [error, setError] = useState('');
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate login
-    localStorage.setItem('quantumEdgeUser', JSON.stringify({ email, username: username || email, provider: 'email' }));
-    window.dispatchEvent(new Event('userStateChanged'));
-    navigate('/');
+    setError('');
+    try {
+      if (mode === 'signup') {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(userCredential.user, { displayName: name || username || email });
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
+      localStorage.setItem('quantumEdgeUser', JSON.stringify({ email: auth.currentUser?.email, uid: auth.currentUser?.uid, provider: 'email' }));
+      window.dispatchEvent(new Event('userStateChanged'));
+      navigate('/');
+    } catch (err: any) {
+      setError(err.message);
+    }
   };
 
-  const handleOAuth = (provider: string) => {
-    // Simulate OAuth login
-    localStorage.setItem('quantumEdgeUser', JSON.stringify({ email: `user@${provider}.com`, provider }));
-    window.dispatchEvent(new Event('userStateChanged'));
-    navigate('/');
+  const handleOAuth = async (provider: string) => {
+    setError('');
+    try {
+      if (provider === 'google') {
+        await signInWithPopup(auth, googleProvider);
+        localStorage.setItem('quantumEdgeUser', JSON.stringify({ email: auth.currentUser?.email, uid: auth.currentUser?.uid, provider }));
+        window.dispatchEvent(new Event('userStateChanged'));
+        navigate('/');
+      } else {
+        setError('GitHub login not configured yet.');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    }
   };
 
   return (
@@ -32,9 +54,15 @@ export default function Auth() {
           {mode === 'login' ? 'Sign In to QuantumEdge' : 'Create an Account'}
         </h2>
         
-        <p style={{ textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '2rem' }}>
-          Signing in is completely optional. Your progress is saved locally either way!
+        <p style={{ textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+          Signing in allows you to save your progress across devices!
         </p>
+
+        {error && (
+          <div style={{ background: '#ff555522', border: '1px solid #ff5555', color: '#ff5555', padding: '0.5rem', borderRadius: '4px', marginBottom: '1rem', textAlign: 'center', fontSize: '0.9rem' }}>
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleEmailSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {mode === 'signup' && (

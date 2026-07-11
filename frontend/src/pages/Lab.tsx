@@ -9,6 +9,8 @@ import Editor from '@monaco-editor/react';
 import type { Module } from '../types';
 import '../App.css';
 import { useProgress } from '../context/ProgressContext';
+import { io } from 'socket.io-client';
+import CircuitBuilder from '../components/CircuitBuilder';
 
 // ============================================================================
 // Custom Resizable Split — built with pure React, no dependencies
@@ -190,6 +192,7 @@ export default function Lab() {
   const [output, setOutput] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [viewMode, setViewMode] = useState<'code' | 'builder'>('code');
   const [aiFeedback, setAiFeedback] = useState<string>('');
   const [language, setLanguage] = useState<'python' | 'cpp'>('python');
 
@@ -220,8 +223,9 @@ export default function Lab() {
   }
 
   const runCode = async () => {
+    if (!code) return;
     setLoading(true);
-    setOutput(null);
+    setOutput({ status: 'Running...' });
     setAiFeedback('');
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/simulate`, {
@@ -230,31 +234,39 @@ export default function Lab() {
         body: JSON.stringify({ code, language })
       });
       const data = await response.json();
-      setOutput({ status: 'Running...' });
-      const pollInterval = setInterval(async () => {
-        try {
-          const pollRes = await fetch(`${import.meta.env.VITE_API_URL}/api/job/${data.jobId}`);
-          const jobData = await pollRes.json();
-          if (jobData.status === 'completed' || jobData.status === 'failed') {
-            clearInterval(pollInterval);
-            setLoading(false);
-            if (jobData.status === 'failed') {
-              setOutput({ error: jobData.result?.error || 'Unknown error occurred.' });
-            } else {
-              setOutput({
-                status: 'success',
-                counts: jobData.result?.counts,
-                diagram: jobData.result?.diagram,
-                output: jobData.result?.output
-              });
-            }
+      
+      const socket = io(import.meta.env.VITE_API_URL);
+      
+      socket.on('connect', () => {
+        socket.emit('subscribe_job', data.jobId);
+      });
+
+      socket.on('job_result', (jobData) => {
+        setLoading(false);
+        if (jobData.status === 'failed') {
+          setOutput({ error: jobData.result?.error || 'Unknown error occurred.' });
+        } else {
+          setOutput({
+            status: 'success',
+            counts: jobData.result?.counts,
+            diagram: jobData.result?.diagram,
+            output: jobData.result?.output
+          });
+          if (id) {
+            markCompleted(id);
           }
-        } catch (pollErr) {
-          clearInterval(pollInterval);
-          setLoading(false);
-          setOutput({ error: 'Failed to poll job status.' });
         }
-      }, 1000);
+        socket.disconnect();
+      });
+
+      setTimeout(() => {
+        if (socket.connected) {
+          socket.disconnect();
+          setLoading(false);
+          setOutput((prev: any) => prev?.status === 'Running...' ? { error: 'Simulation timed out' } : prev);
+        }
+      }, 30000);
+
     } catch (err: any) {
       setOutput({ error: err.message });
       setLoading(false);
@@ -330,30 +342,33 @@ export default function Lab() {
           initialRatio={50}
           storageKey="qe-main-split"
           first={
-            /* ---- CODE EDITOR ---- */
-            <div style={{
-              height: '100%',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'rgba(255,255,255,0.03)',
-            }}>
-              <Editor
-                height="100%"
-                width="100%"
-                defaultLanguage={language}
-                language={language}
-                theme="vs-dark"
-                value={code}
-                onChange={(value) => setCode(value || '')}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 14,
-                  fontFamily: 'Fira Code, monospace',
-                  padding: { top: 16 },
-                  automaticLayout: true,
-                }}
-              />
+            /* Left side: Editor or Builder */
+            <div style={{ height: '100%', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', position: 'relative' }}>
+              <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10, display: 'flex', gap: '0.5rem', background: '#333', padding: '0.2rem', borderRadius: '4px' }}>
+                <button onClick={() => setViewMode('code')} style={{ padding: '0.3rem 0.6rem', border: 'none', background: viewMode === 'code' ? 'var(--primary)' : 'transparent', color: viewMode === 'code' ? '#000' : '#fff', cursor: 'pointer', borderRadius: '2px' }}>Code</button>
+                <button onClick={() => setViewMode('builder')} style={{ padding: '0.3rem 0.6rem', border: 'none', background: viewMode === 'builder' ? 'var(--primary)' : 'transparent', color: viewMode === 'builder' ? '#000' : '#fff', cursor: 'pointer', borderRadius: '2px' }}>Visual Builder</button>
+              </div>
+              
+              {viewMode === 'code' ? (
+                <Editor
+                  height="100%"
+                  defaultLanguage={language}
+                  language={language}
+                  theme="vs-dark"
+                  value={code}
+                  onChange={(val) => setCode(val || '')}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    wordWrap: 'on',
+                    scrollBeyondLastLine: false,
+                    padding: { top: 16 },
+                    automaticLayout: true
+                  }}
+                />
+              ) : (
+                <CircuitBuilder onCodeGenerated={(val) => setCode(val)} />
+              )}
             </div>
           }
           second={

@@ -10,6 +10,8 @@
 // ============================================================================
 
 const express = require('express');
+const { createServer } = require('http');
+const { Server } = require('socket.io');
 const cors = require('cors');
 const amqp = require('amqplib');
 const mongoose = require('mongoose');
@@ -25,10 +27,23 @@ const Job = require('./models/Job');
 const { createRateLimiter } = require('./middleware/rateLimiter');
 const { parsePagination, buildPaginationMeta } = require('./middleware/paginate');
 
-// Initialize Express
+// Initialize Express & Socket.io
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: '*',
+  }
+});
 app.use(cors());
 app.use(express.json());
+
+// Socket.io connections
+io.on('connection', (socket) => {
+  socket.on('subscribe_job', (jobId) => {
+    socket.join(jobId);
+  });
+});
 
 // Configuration
 const PORT = process.env.PORT || 4000;
@@ -77,6 +92,10 @@ async function connectQueue() {
           const { jobId, result } = data;
           const status = result.error ? 'failed' : 'completed';
           await Job.findOneAndUpdate({ jobId }, { status, result });
+          
+          // Emit result to connected websocket clients for this job
+          io.to(jobId).emit('job_result', { status, result });
+          
           channel.ack(msg);
         } catch (err) {
           console.error("Error processing job_results:", err);
@@ -165,22 +184,41 @@ app.get('/api/curriculum', async (req, res) => {
     await new Promise((resolve) => rl.curriculum(req, res, resolve));
     if (res.headersSent) return; // 429 was already sent
 
+    const cacheKey = `curriculum:${req.query.page || 'all'}:${req.query.limit || 'all'}`;
+    
+    // 1. Check Redis Cache
+    if (redisClient && redisClient.isOpen) {
+      const cachedData = await redisClient.get(cacheKey);
+      if (cachedData) {
+        return res.json(JSON.parse(cachedData));
+      }
+    }
+
+    // 2. Fetch from DB on cache miss
     const course = await Course.findOne({ courseId: 'quantum-dev-101' });
     if (!course) return res.json({ modules: [] });
 
+    let responseData;
     // If pagination params are provided, paginate the modules array
     if (req.query.page || req.query.limit) {
       const { page, limit, skip } = parsePagination(req.query);
       const allModules = course.modules || [];
       const paginatedModules = allModules.slice(skip, skip + limit);
-      return res.json({
+      responseData = {
         modules: paginatedModules,
         pagination: buildPaginationMeta(page, limit, allModules.length),
-      });
+      };
+    } else {
+      // Default: return everything (backward-compatible)
+      responseData = course;
     }
 
-    // Default: return everything (backward-compatible)
-    res.json(course);
+    // 3. Save to Redis Cache (expire in 3600 seconds = 1 hour)
+    if (redisClient && redisClient.isOpen) {
+      await redisClient.setEx(cacheKey, 3600, JSON.stringify(responseData));
+    }
+
+    res.json(responseData);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -347,8 +385,8 @@ app.get('/health', (req, res) => res.json({
 // ============================================================================
 // SERVER STARTUP
 // ============================================================================
-app.listen(PORT, async () => {
-  console.log(`API Gateway running on port ${PORT}`);
+httpServer.listen(PORT, async () => {
+  console.log(`API Gateway & WebSocket server running on port ${PORT}`);
   await connectDB();
   await connectRedis();
   await connectQueue();
