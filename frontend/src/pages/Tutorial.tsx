@@ -46,8 +46,6 @@ import type { Module } from '../types';
 // (like a Bloch sphere or circuit demo) that can be embedded inside tutorial content.
 import MiniSimulator from '../components/MiniSimulator';
 
-import MiniSimulator from '../components/MiniSimulator';
-
 // Import shared application styles
 import '../App.css';
 

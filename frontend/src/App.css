@@ -827,21 +827,16 @@ nav ul li.active a, nav ul li.active span {
 
 /* 
  * Editor Section (Lab View) — The code editor panel in the lab workspace.
- * Gets 1.5× the space compared to the output panel (flex: 1.5 vs flex: 1).
  */
 .editor-section {
-  /* Takes up 1.5 parts of the available space (editor is wider than output) */
-  flex: 1.5;
+  /* Let react-resizable-panels control sizing via its inline styles */
   /* We remove overflow: hidden so it can grow */
 }
 
 /* 
  * Output Section (Lab View) — The panel showing code output, diagrams, and feedback.
- * Gets 1× the space compared to the editor's 1.5× (narrower than editor).
  */
 .output-section {
-  /* Takes up 1 part of the available space */
-  flex: 1;
   /* Enables flexbox for vertical stacking of output sub-panels */
   display: flex;
   /* Stacks output panels vertically (terminal, diagram, etc.) */
@@ -961,15 +956,24 @@ nav ul li.active a, nav ul li.active span {
 }
 
 .lab-workspace {
-  gap: 2rem !important;
+  gap: 0 !important;
+  overflow: hidden;
 }
 
-.editor-section {
-  flex: 1 !important;
+/* Ensure editor and output sections fill their ResizableSplit containers */
+.editor-section.glass-panel {
+  height: 100% !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.output-section {
-  flex: 1.2 !important;
+.output-section.glass-panel {
+  height: 100% !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0 !important;
 }
 
 .circuit-diagram {
@@ -992,9 +996,190 @@ nav ul li.active a, nav ul li.active span {
 }
 
 .visualizer-panel {
-  flex: 2 !important;
+  height: 100% !important;
 }
 
 .terminal-panel {
-  flex: 1 !important;
+  height: 100% !important;
+}
+
+/* =========================================================================
+   LAYOUT SWITCHER
+   A premium dropdown menu for selecting workspace layout presets.
+   Features glassmorphism styling, smooth animations, and visual feedback.
+   ========================================================================= */
+
+/* Layout Switcher — Container with relative positioning for dropdown */
+.layout-switcher {
+  position: relative;
+}
+
+/* Layout Trigger — The button that opens the layout menu */
+.layout-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.25s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.layout-trigger:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 12px rgba(69, 243, 255, 0.1);
+}
+
+.layout-trigger.active {
+  background: rgba(69, 243, 255, 0.1);
+  border-color: rgba(69, 243, 255, 0.3);
+  box-shadow: 0 0 16px rgba(69, 243, 255, 0.15);
+}
+
+.layout-trigger-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.layout-trigger-label {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.layout-trigger-caret {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  transition: transform 0.2s ease;
+}
+
+.layout-trigger.active .layout-trigger-caret {
+  transform: rotate(180deg);
+}
+
+/* Layout Menu — The dropdown panel showing all layout options */
+.layout-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 240px;
+  background: rgba(15, 17, 30, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 0.5rem;
+  z-index: 1000;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  animation: layoutMenuIn 0.2s ease-out;
+}
+
+@keyframes layoutMenuIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+/* Layout Menu Header — Title inside the dropdown */
+.layout-menu-header {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  padding: 0.4rem 0.75rem 0.5rem;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 0.35rem;
+}
+
+/* Layout Option — Each selectable layout preset button */
+.layout-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text);
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  font-size: 0.85rem;
+}
+
+.layout-option:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.layout-option.active {
+  background: rgba(69, 243, 255, 0.08);
+  border-color: rgba(69, 243, 255, 0.2);
+}
+
+.layout-option-icon {
+  font-size: 1.2rem;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  flex-shrink: 0;
+}
+
+.layout-option.active .layout-option-icon {
+  background: rgba(69, 243, 255, 0.12);
+}
+
+.layout-option-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.layout-option-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.01em;
+}
+
+.layout-option-desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.layout-option-check {
+  color: var(--primary);
+  font-size: 0.9rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Layout-specific workspace adjustments for stacked mode */
+.lab-workspace.layout-stacked {
+  flex-direction: column !important;
 }

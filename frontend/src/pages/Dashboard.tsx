@@ -7,7 +7,7 @@
 //   4. Renders a grid of clickable module cards so the student can start lessons
 // ============================================================================
 
-/import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Module } from '../types';
 import '../App.css';
