@@ -11,7 +11,6 @@ import '../App.css';
 import { useProgress } from '../context/ProgressContext';
 import { io } from 'socket.io-client';
 import CircuitBuilder from '../components/CircuitBuilder';
-import Joyride, { Step } from 'react-joyride';
 
 // ============================================================================
 // Custom Resizable Split — built with pure React, no dependencies
@@ -196,53 +195,6 @@ export default function Lab() {
   const [viewMode, setViewMode] = useState<'code' | 'builder'>('code');
   const [aiFeedback, setAiFeedback] = useState<string>('');
   const [language, setLanguage] = useState<'python' | 'cpp'>('python');
-  
-  // Tour State
-  const [runTour, setRunTour] = useState(false);
-  const steps: Step[] = [
-    {
-      target: '.tour-actions',
-      content: 'Welcome to the Lab! Here you can switch languages, get AI code reviews, and run your quantum simulations.',
-      placement: 'bottom',
-      disableBeacon: true,
-    },
-    {
-      target: '.tour-view-toggle',
-      content: 'Switch between typing Qiskit Python code and using our visual drag-and-drop Circuit Builder!',
-      placement: 'left',
-    },
-    {
-      target: '.tour-code-editor',
-      content: 'This is your workspace. We preload it with starter code for the current tutorial.',
-      placement: 'right',
-    },
-    {
-      target: '.tour-visualizer',
-      content: 'When you run your code, your quantum circuit diagram will be automatically drawn here.',
-      placement: 'left',
-    },
-    {
-      target: '.tour-terminal',
-      content: 'The integrated terminal shows your real-time standard output and measurement probabilities!',
-      placement: 'left',
-    }
-  ];
-
-  useEffect(() => {
-    // Only run tour if they haven't seen it yet
-    const hasSeenTour = localStorage.getItem('hasSeenLabTour');
-    if (!hasSeenTour) {
-      setTimeout(() => setRunTour(true), 500); // Small delay to let UI mount
-    }
-  }, []);
-
-  const handleJoyrideCallback = (data: any) => {
-    const { status } = data;
-    if (['finished', 'skipped'].includes(status)) {
-      setRunTour(false);
-      localStorage.setItem('hasSeenLabTour', 'true');
-    }
-  };
 
   // Fetch module data
   useEffect(() => {
@@ -353,29 +305,11 @@ export default function Lab() {
 
   return (
     <div className="lab-layout">
-      <Joyride
-        steps={steps}
-        run={runTour}
-        continuous={true}
-        showProgress={true}
-        showSkipButton={true}
-        callback={handleJoyrideCallback}
-        styles={{
-          options: {
-            primaryColor: '#64ffda',
-            backgroundColor: '#1e1e1e',
-            textColor: '#fff',
-            arrowColor: '#1e1e1e',
-          },
-          buttonNext: { color: '#000' },
-          buttonBack: { color: '#64ffda' }
-        }}
-      />
       {/* Header */}
       <div className="lab-header glass-header">
         <button className="back-btn" onClick={() => navigate(`/tutorial/${module.id}`)}>← Back to Tutorial</button>
         <h2>Lab: {module.title}</h2>
-        <div className="header-actions tour-actions">
+        <div className="header-actions">
           <select className="lang-select" value={language} onChange={handleLanguageChange}>
             <option value="python">Python (Qiskit)</option>
             <option value="cpp">C++ (QuEST)</option>
@@ -421,8 +355,8 @@ export default function Lab() {
           storageKey="qe-main-split"
           first={
             /* Left side: Editor or Builder */
-            <div className="tour-code-editor" style={{ height: '100%', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', position: 'relative' }}>
-              <div className="tour-view-toggle" style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10, display: 'flex', gap: '0.5rem', background: '#333', padding: '0.2rem', borderRadius: '4px' }}>
+            <div style={{ height: '100%', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', position: 'relative' }}>
+              <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10, display: 'flex', gap: '0.5rem', background: '#333', padding: '0.2rem', borderRadius: '4px' }}>
                 <button onClick={() => setViewMode('code')} style={{ padding: '0.3rem 0.6rem', border: 'none', background: viewMode === 'code' ? 'var(--primary)' : 'transparent', color: viewMode === 'code' ? '#000' : '#fff', cursor: 'pointer', borderRadius: '2px' }}>Code</button>
                 <button onClick={() => setViewMode('builder')} style={{ padding: '0.3rem 0.6rem', border: 'none', background: viewMode === 'builder' ? 'var(--primary)' : 'transparent', color: viewMode === 'builder' ? '#000' : '#fff', cursor: 'pointer', borderRadius: '2px' }}>Visual Builder</button>
               </div>
@@ -464,7 +398,7 @@ export default function Lab() {
                 storageKey="qe-output-split"
                 first={
                   /* Circuit Visualizer */
-                  <div className="tour-visualizer" style={{ height: '100%', padding: '1rem', overflow: 'auto', boxSizing: 'border-box' }}>
+                  <div style={{ height: '100%', padding: '1rem', overflow: 'auto', boxSizing: 'border-box' }}>
                     <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', color: 'rgba(255,255,255,0.5)' }}>
                       Circuit Visualizer
                     </h3>
@@ -479,7 +413,7 @@ export default function Lab() {
                 }
                 second={
                   /* Integrated Terminal */
-                  <div className="tour-terminal" style={{ height: '100%', padding: '1rem', overflow: 'auto', boxSizing: 'border-box' }}>
+                  <div style={{ height: '100%', padding: '1rem', overflow: 'auto', boxSizing: 'border-box' }}>
                     <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', color: 'rgba(255,255,255,0.5)' }}>
                       Integrated Terminal
                     </h3>
