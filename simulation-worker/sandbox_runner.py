@@ -7,9 +7,10 @@ import io
 from qiskit import QuantumCircuit, transpile
 # Import the AerSimulator to simulate quantum circuits classically
 from qiskit_aer import AerSimulator
+from qiskit_aer.noise import NoiseModel, depolarizing_error, thermal_relaxation_error
 
 # Function to execute the user's code and run the simulation
-def run_simulation(code):
+def run_simulation(code, noise_model_name='ideal'):
     try:
         local_scope = {
             'QuantumCircuit': QuantumCircuit
@@ -44,6 +45,21 @@ def run_simulation(code):
             if len(qc.clbits) > 0:
                 try:
                     simulator = AerSimulator()
+                    
+                    # Apply noise model if requested
+                    if noise_model_name == 'depolarizing':
+                        noise_model = NoiseModel()
+                        error = depolarizing_error(0.05, 1) # 5% error on 1-qubit gates
+                        error2 = depolarizing_error(0.1, 2) # 10% error on 2-qubit gates
+                        noise_model.add_all_qubit_quantum_error(error, ['u1', 'u2', 'u3', 'rx', 'ry', 'rz', 'h', 'x', 'y', 'z'])
+                        noise_model.add_all_qubit_quantum_error(error2, ['cx', 'cz'])
+                        simulator = AerSimulator(noise_model=noise_model)
+                    elif noise_model_name == 'thermal':
+                        noise_model = NoiseModel()
+                        error = thermal_relaxation_error(50e-3, 70e-3, 100e-9) # T1=50ms, T2=70ms, Gate=100ns
+                        noise_model.add_all_qubit_quantum_error(error, ['id', 'u1', 'u2', 'u3', 'rx', 'ry', 'rz', 'h', 'x', 'y', 'z'])
+                        simulator = AerSimulator(noise_model=noise_model)
+                        
                     compiled_circuit = transpile(qc, simulator)
                     job = simulator.run(compiled_circuit)
                     counts = job.result().get_counts()
@@ -61,6 +77,14 @@ def run_simulation(code):
 
 # Main entry point of the script
 if __name__ == "__main__":
-    code = sys.stdin.read()
-    res = run_simulation(code)
+    payload_str = sys.stdin.read()
+    try:
+        payload = json.loads(payload_str)
+        code = payload.get('code', '')
+        noise_model = payload.get('noiseModel', 'ideal')
+    except:
+        code = payload_str
+        noise_model = 'ideal'
+        
+    res = run_simulation(code, noise_model)
     print(json.dumps(res))

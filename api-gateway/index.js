@@ -38,10 +38,51 @@ const io = new Server(httpServer, {
 app.use(cors());
 app.use(express.json());
 
-// Socket.io connections
+// Socket.io connections for Multiplayer, Chat, and WebRTC
 io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+
   socket.on('subscribe_job', (jobId) => {
     socket.join(jobId);
+  });
+
+  // Multiplayer Rooms
+  socket.on('join_room', ({ roomId, username }) => {
+    socket.join(roomId);
+    socket.to(roomId).emit('user_joined', { username, socketId: socket.id });
+    console.log(`${username} joined room ${roomId}`);
+  });
+
+  socket.on('leave_room', ({ roomId, username }) => {
+    socket.leave(roomId);
+    socket.to(roomId).emit('user_left', { username, socketId: socket.id });
+  });
+
+  // Chat
+  socket.on('chat_message', ({ roomId, username, message }) => {
+    io.to(roomId).emit('chat_message', { username, message, timestamp: new Date() });
+  });
+
+  // Circuit Sync
+  socket.on('circuit_update', ({ roomId, username, moments }) => {
+    socket.to(roomId).emit('circuit_update', { username, moments });
+  });
+
+  // WebRTC Signaling
+  socket.on('video_offer', ({ roomId, offer, senderId }) => {
+    socket.to(roomId).emit('video_offer', { offer, senderId, socketId: socket.id });
+  });
+
+  socket.on('video_answer', ({ roomId, answer, senderId }) => {
+    socket.to(roomId).emit('video_answer', { answer, senderId, socketId: socket.id });
+  });
+
+  socket.on('new_ice_candidate', ({ roomId, candidate, senderId }) => {
+    socket.to(roomId).emit('new_ice_candidate', { candidate, senderId, socketId: socket.id });
+  });
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
   });
 });
 
@@ -242,8 +283,62 @@ app.get('/api/progress/:username', async (req, res) => {
 });
 
 /**
+ * POST /api/progress/:username
+ * Updates progress and awards XP for completing a module.
+ */
+app.post('/api/progress/:username', async (req, res) => {
+  try {
+    const rl = getRateLimiters();
+    await new Promise((resolve) => rl.progress(req, res, resolve));
+    if (res.headersSent) return;
+
+    const { moduleId, completed } = req.body;
+    let user = await User.findOne({ username: req.params.username });
+    
+    if (!user) {
+      user = new User({ username: req.params.username, xp: 0 });
+    }
+
+    const existingProgress = user.progress.find(p => p.moduleId === moduleId);
+    if (existingProgress) {
+      if (!existingProgress.completed && completed) {
+        user.xp += 100; // Award 100 XP for completing a module
+        existingProgress.completed = true;
+      }
+    } else {
+      user.progress.push({ moduleId, completed });
+      if (completed) user.xp += 100;
+    }
+
+    await user.save();
+    res.json({ success: true, xp: user.xp });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/**
+ * GET /api/leaderboard
+ * Returns the top 10 users ranked by XP.
+ */
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const rl = getRateLimiters();
+    await new Promise((resolve) => rl.progress(req, res, resolve));
+    if (res.headersSent) return;
+
+    const topUsers = await User.find().sort({ xp: -1 }).limit(10).select('username xp avatar -_id');
+    res.json(topUsers);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+const { getQuantumCodeReview } = require('./services/aiService');
+
+/**
  * POST /api/review
- * Sends user code to Gemini AI for code review.
+ * Sends user code to an AI model for code review.
  * Rate limited: 5 requests/minute per IP.
  */
 app.post('/api/review', async (req, res) => {
@@ -252,25 +347,20 @@ app.post('/api/review', async (req, res) => {
     await new Promise((resolve) => rl.review(req, res, resolve));
     if (res.headersSent) return;
 
-    const { code } = req.body;
-    if (!process.env.GEMINI_API_KEY) {
+    const { code, expectedOutput, actualErrorOrOutput } = req.body;
+    
+    // Check if any API key is configured (handled in the service, but we catch gracefully here too)
+    if (!process.env.GEMINI_API_KEY && !process.env.OPENAI_API_KEY) {
       return res.json({ feedback: "AI Reviewer is disabled (no API key provided)." });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const prompt = `You are a Quantum Computing AI Code Reviewer. 
-    Analyze the following Qiskit/Python code. 
-    Provide automated feedback on circuit gate optimization and potential qubit decoherence issues.
-    Keep the feedback concise, actionable, and less than 150 words. 
-    Code: \n\n${code}`;
+    // This calls our flexible aiService.js wrapper
+    const feedback = await getQuantumCodeReview(code, expectedOutput, actualErrorOrOutput);
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-
-    res.json({ feedback: text });
+    res.json({ feedback });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error('AI Review Route Error:', e);
+    res.status(500).json({ error: e.message || 'AI request failed' });
   }
 });
 
@@ -285,13 +375,13 @@ app.post('/api/simulate', async (req, res) => {
     await new Promise((resolve) => rl.simulate(req, res, resolve));
     if (res.headersSent) return;
 
-    const { code, language } = req.body;
+    const { code, language, noiseModel } = req.body;
     if (!code) {
       return res.status(400).json({ error: 'No code provided' });
     }
 
     const jobId = Math.random().toString(36).substring(7);
-    const job = { jobId, code, language: language || 'python' };
+    const job = { jobId, code, language: language || 'python', noiseModel: noiseModel || 'ideal' };
     const queueName = job.language === 'cpp' ? 'cpp_jobs' : 'quantum_jobs';
 
     if (channel) {

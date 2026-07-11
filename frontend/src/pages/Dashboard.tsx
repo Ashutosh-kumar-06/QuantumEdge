@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import type { Module } from '../types';
 import '../App.css';
 import { useProgress } from '../context/ProgressContext';
+import Leaderboard from '../components/Leaderboard';
 
 export default function Dashboard() {
   const [curriculum, setCurriculum] = useState<Module[]>([]);
@@ -63,6 +64,9 @@ export default function Dashboard() {
           {/* End of progress bar */}
           </div>
         {/* End of progress overview section */}
+        </div>
+        <div style={{ marginTop: '2rem' }}>
+          <Leaderboard />
         </div>
       {/* End of dashboard header panel */}
       </div>

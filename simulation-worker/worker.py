@@ -30,7 +30,7 @@ def connect_queue():
             time.sleep(5)
 
 # Function to execute the user's Python code securely
-def run_simulation(code):
+def run_simulation(code, noise_model='ideal'):
     try:
         # Secure DooD (Docker-out-of-Docker) execution: 
         # Spawn an ephemeral, network-disabled container to run the untrusted code
@@ -44,8 +44,9 @@ def run_simulation(code):
             "sandbox_runner.py" # The script inside the container that will actually execute the code
         ]
         
-        # Run the docker command, passing the user's code via standard input (stdin)
-        process = subprocess.run(cmd, input=code, capture_output=True, text=True, timeout=15)
+        # Pass both code and noiseModel via stdin as JSON
+        payload = json.dumps({"code": code, "noiseModel": noise_model})
+        process = subprocess.run(cmd, input=payload, capture_output=True, text=True, timeout=15)
         
         # If the docker command failed (non-zero return code), return the error message
         if process.returncode != 0:
@@ -73,8 +74,9 @@ def callback(ch, method, properties, body):
     
     # Extract the code from the job
     code = job.get('code')
+    noise_model = job.get('noiseModel', 'ideal')
     # Run the simulation and get the results
-    result = run_simulation(code)
+    result = run_simulation(code, noise_model)
     
     # Prepare the response package to send back to the API Gateway
     response = {

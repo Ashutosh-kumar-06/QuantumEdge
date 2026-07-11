@@ -30,9 +30,29 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     document.cookie = `quantumEdgeProgress=${JSON.stringify(completedModules)}; path=/; max-age=31536000`;
   }, [completedModules]);
 
-  const markCompleted = (moduleId: string) => {
+  // Generate or load a unique username for the leaderboard
+  const [username, setUsername] = useState<string>('');
+
+  useEffect(() => {
+    let savedUser = localStorage.getItem('quantumEdgeUser');
+    if (!savedUser) {
+      savedUser = 'QuantumExplorer_' + Math.floor(Math.random() * 10000);
+      localStorage.setItem('quantumEdgeUser', savedUser);
+    }
+    setUsername(savedUser);
+  }, []);
+
+  const markCompleted = async (moduleId: string) => {
     setCompletedModules(prev => {
       if (!prev.includes(moduleId)) {
+        // Sync with backend asynchronously
+        if (username) {
+          fetch(`${import.meta.env.VITE_API_URL}/api/progress/${username}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ moduleId, completed: true })
+          }).catch(err => console.error("Failed to sync progress:", err));
+        }
         return [...prev, moduleId];
       }
       return prev;

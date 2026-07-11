@@ -11,6 +11,7 @@ import '../App.css';
 import { useProgress } from '../context/ProgressContext';
 import { io } from 'socket.io-client';
 import CircuitBuilder from '../components/CircuitBuilder';
+import MultiplayerChat from '../components/MultiplayerChat';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 
@@ -197,6 +198,10 @@ export default function Lab() {
   const [viewMode, setViewMode] = useState<'code' | 'builder'>('code');
   const [aiFeedback, setAiFeedback] = useState<string>('');
   const [language, setLanguage] = useState<'python' | 'cpp'>('python');
+  const [noiseModel, setNoiseModel] = useState<'ideal' | 'depolarizing' | 'thermal'>('ideal');
+  
+  // Multiplayer Room State
+  const [roomId, setRoomId] = useState<string>('');
 
   // Tour Guide using Driver.js
   useEffect(() => {
@@ -210,7 +215,9 @@ export default function Lab() {
             { element: '.tour-view-toggle', popover: { title: 'Workspace Toggle', description: 'Switch between typing code directly and using our visual drag-and-drop Circuit Builder!', side: 'left', align: 'start' } },
             { element: '.tour-code-editor', popover: { title: 'Your Workspace', description: 'This is where you write or generate your quantum circuits.', side: 'right', align: 'start' } },
             { element: '.tour-visualizer', popover: { title: 'Circuit Diagram', description: 'When you run your code, the quantum circuit will automatically be visualized here.', side: 'left', align: 'start' } },
-            { element: '.tour-terminal', popover: { title: 'Terminal', description: 'See real-time standard output and measurement probabilities when you run simulations!', side: 'left', align: 'start' } }
+            { element: '.tour-terminal', popover: { title: 'Terminal', description: 'See your circuit output, measurement counts, and get AI hints if you get stuck.', side: 'top', align: 'start' } },
+            { element: '.builder-grid', popover: { title: 'Visual Circuit Builder', description: 'Click cells to cycle through quantum gates (H, X, Y, Z, S, T) and visually design your circuit.', side: 'top', align: 'start' } },
+            { element: '.remove-qubit-btn', popover: { title: 'Remove Qubits', description: 'You can remove qubits and moments dynamically as you build.', side: 'top', align: 'start' } }
           ],
           onDestroyStarted: () => {
             localStorage.setItem('hasSeenLabTour', 'true');
@@ -269,7 +276,7 @@ export default function Lab() {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, language })
+        body: JSON.stringify({ code, language, noiseModel })
       });
       const data = await response.json();
       
@@ -317,7 +324,7 @@ export default function Lab() {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code })
+        body: JSON.stringify({ code, actualErrorOrOutput: output })
       });
       const data = await response.json();
       setAiFeedback(data.feedback);
@@ -364,6 +371,19 @@ export default function Lab() {
           <button className="run-btn" onClick={runCode} disabled={loading}>
             {loading ? 'Running...' : '▶ Run Simulation'}
           </button>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
+            <label style={{ color: '#fff', fontSize: '0.9rem' }}>Environment:</label>
+            <select 
+              value={noiseModel} 
+              onChange={e => setNoiseModel(e.target.value as any)}
+              style={{ background: '#222', color: '#fff', border: '1px solid #444', padding: '0.5rem', borderRadius: '4px' }}
+            >
+              <option value="ideal">Ideal Simulator (No Noise)</option>
+              <option value="depolarizing">IBM Quantum Manila (Depolarizing)</option>
+              <option value="thermal">Superconducting (Thermal Relaxation)</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -405,7 +425,14 @@ export default function Lab() {
                   }}
                 />
               ) : (
-                <CircuitBuilder onCodeGenerated={(val) => setCode(val)} />
+                <div style={{ height: '100%', padding: '0', overflow: 'hidden' }}>
+                  <CircuitBuilder 
+                    onCodeGenerated={setCode} 
+                    socket={socket}
+                    roomId={roomId}
+                    username={localStorage.getItem('quantumEdgeUser') || `User_${Math.floor(Math.random()*1000)}`}
+                  />
+                </div>
               )}
             </div>
           }
@@ -479,6 +506,16 @@ export default function Lab() {
                       ) : (
                         <span className="placeholder-text">Awaiting execution...</span>
                       )}
+                    </div>
+                    
+                    <div style={{ marginTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem', height: '400px' }}>
+                      <MultiplayerChat 
+                        socket={socket} 
+                        username={localStorage.getItem('quantumEdgeUser') || `User_${Math.floor(Math.random()*1000)}`}
+                        defaultRoom={module.id} 
+                        roomId={roomId || module.id}
+                        setRoomId={setRoomId}
+                      />
                     </div>
                   </div>
                 }
