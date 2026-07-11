@@ -45,17 +45,6 @@ export default function Dashboard() {
       <div className="dashboard-header glass-panel">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2>Welcome back, {user ? user.email.split('@')[0] : 'Student'}!</h2>
-          {user && (
-            <button 
-              onClick={() => {
-                localStorage.removeItem('quantumEdgeUser');
-                setUser(null);
-              }}
-              style={{ padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '4px', cursor: 'pointer' }}
-            >
-              Sign Out
-            </button>
-          )}
         </div>
 
         <div className="progress-overview">

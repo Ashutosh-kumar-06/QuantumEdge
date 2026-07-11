@@ -12,12 +12,14 @@ export default function Auth() {
     e.preventDefault();
     // Simulate login
     localStorage.setItem('quantumEdgeUser', JSON.stringify({ email, provider: 'email' }));
+    window.dispatchEvent(new Event('userStateChanged'));
     navigate('/');
   };
 
   const handleOAuth = (provider: string) => {
     // Simulate OAuth login
     localStorage.setItem('quantumEdgeUser', JSON.stringify({ email: `user@${provider}.com`, provider }));
+    window.dispatchEvent(new Event('userStateChanged'));
     navigate('/');
   };
 

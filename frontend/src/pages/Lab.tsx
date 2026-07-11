@@ -230,7 +230,7 @@ export default function Lab() {
         body: JSON.stringify({ code, language })
       });
       const data = await response.json();
-      setOutput({ status: 'Processing...', jobId: data.jobId });
+      setOutput({ status: 'Running...' });
       const pollInterval = setInterval(async () => {
         try {
           const pollRes = await fetch(`${import.meta.env.VITE_API_URL}/api/job/${data.jobId}`);
