@@ -92,8 +92,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "5173:5173" # Expose the Vite dev server port
-    environment:
-      - VITE_API_URL=http://localhost:4000 # Tell the frontend where the API is located
+    env_file:
+      - ./frontend/.env
     networks:
       - quantum_network
 
