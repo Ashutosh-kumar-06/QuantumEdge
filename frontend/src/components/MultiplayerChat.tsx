@@ -9,7 +9,7 @@ interface MultiplayerChatProps {
   setRoomId: (id: string) => void;
 }
 
-export default function MultiplayerChat({ socket, username, defaultRoom, roomId, setRoomId }: MultiplayerChatProps) {
+export default function MultiplayerChat({ socket, username, roomId, setRoomId }: MultiplayerChatProps) {
   const [inRoom, setInRoom] = useState(false);
   const [messages, setMessages] = useState<{user: string, text: string, time: Date}[]>([]);
   const [input, setInput] = useState('');

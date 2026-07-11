@@ -16,7 +16,7 @@ import Leaderboard from '../components/Leaderboard';
 
 export default function Dashboard() {
   const [curriculum, setCurriculum] = useState<Module[]>([]);
-  const { isCompleted, completedModules } = useProgress();
+  const { isCompleted } = useProgress();
   const [user, setUser] = useState<{email: string, provider: string} | null>(null);
 
   const navigate = useNavigate();
