@@ -192,7 +192,7 @@ function ResizableSplit({
 // Lab Component
 // ============================================================================
 export default function Lab() {
-  const { isCompleted, markCompleted } = useProgress();
+  const { markCompleted } = useProgress();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -205,6 +205,7 @@ export default function Lab() {
   const [aiFeedback, setAiFeedback] = useState<string>('');
   const [language, setLanguage] = useState<'python' | 'cpp'>('python');
   const [noiseModel, setNoiseModel] = useState<'ideal' | 'depolarizing' | 'thermal'>('ideal');
+  const [activeOutputTab, setActiveOutputTab] = useState<'visualizer' | 'analytics' | 'multiplayer' | 'terminal'>('visualizer');
   
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -389,188 +390,204 @@ export default function Lab() {
 
   return (
     <div className="lab-layout">
-      {/* Header */}
-      <div className="lab-header glass-header">
-        <button className="back-btn" onClick={() => navigate(`/tutorial/${module.id}`)}>← Back to Tutorial</button>
-        <h2>Lab: {module.title}</h2>
-        <div className="header-actions tour-actions">
-          <select className="lang-select" value={language} onChange={handleLanguageChange}>
-            <option value="python">Python (Qiskit)</option>
-            <option value="cpp">C++ (QuEST)</option>
-          </select>
-
+      <div style={{ display: 'flex', height: 'calc(100vh - 60px)', width: '100%', overflow: 'hidden' }}>
+        {/* Left Sidebar */}
+        <div style={{ width: '60px', background: 'var(--panel-bg)', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1rem 0', gap: '1.5rem', zIndex: 10 }}>
           <button 
-            className="start-coding-btn" 
-            style={{ 
-              background: module && isCompleted(module.id) ? 'var(--primary)' : 'rgba(255,255,255,0.1)',
-              padding: '0.6rem 1.2rem',
-              border: 'none',
-              borderRadius: '4px',
-              color: 'white',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
-            onClick={() => module && markCompleted(module.id)}
-          >
-            {module && isCompleted(module.id) ? '✓ Completed' : 'Mark Complete'}
+            title="Code Editor"
+            onClick={() => setViewMode('code')} 
+            style={{ background: 'transparent', border: 'none', color: viewMode === 'code' ? 'var(--primary)' : '#888', cursor: 'pointer', fontSize: '1.5rem', transition: 'color 0.2s' }}>
+            💻
           </button>
-
-          <button className="review-btn" onClick={requestAiReview} disabled={reviewLoading}>
-            {reviewLoading ? 'Reviewing...' : '✨ AI Code Review'}
+          <button 
+            title="Visual Builder"
+            onClick={() => setViewMode('builder')} 
+            style={{ background: 'transparent', border: 'none', color: viewMode === 'builder' ? 'var(--primary)' : '#888', cursor: 'pointer', fontSize: '1.5rem', transition: 'color 0.2s' }}>
+            🧩
           </button>
-
-          <button onClick={saveProject} style={{ background: '#444', color: '#fff', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
-            ☁️ Save to Cloud
+          <button 
+            title="AI Code Review"
+            onClick={requestAiReview} disabled={reviewLoading}
+            style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.5rem', transition: 'color 0.2s', marginTop: 'auto' }}>
+            ✨
           </button>
-
-          <button className="run-btn" onClick={runCode} disabled={loading}>
-            {loading ? 'Running...' : '▶ Run Simulation'}
+          <button 
+            title="Save to Cloud"
+            onClick={saveProject}
+            style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.5rem', transition: 'color 0.2s' }}>
+            ☁️
           </button>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
-            <label style={{ color: '#fff', fontSize: '0.9rem' }}>Environment:</label>
-            <select 
-              value={noiseModel} 
-              onChange={e => setNoiseModel(e.target.value as any)}
-              style={{ background: '#222', color: '#fff', border: '1px solid #444', padding: '0.5rem', borderRadius: '4px' }}
-            >
-              <option value="ideal">Ideal Simulator (No Noise)</option>
-              <option value="depolarizing">IBM Quantum Manila (Depolarizing)</option>
-              <option value="thermal">Superconducting (Thermal Relaxation)</option>
-            </select>
-          </div>
         </div>
-      </div>
 
-      {/* Workspace — full remaining viewport height */}
-      <div style={{
-        height: 'calc(100vh - 140px)',
-        width: '100%',
-        overflow: 'hidden',
-        padding: '0.5rem',
-        boxSizing: 'border-box',
-      }}>
-        <ResizableSplit
-          direction="horizontal"
-          initialRatio={50}
-          storageKey="qe-main-split"
-          first={
-            /* Left side: Editor or Builder */
-            <div className="tour-code-editor" style={{ height: '100%', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', position: 'relative' }}>
-              <div className="tour-view-toggle" style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10, display: 'flex', gap: '0.5rem', background: '#333', padding: '0.2rem', borderRadius: '4px' }}>
-                <button onClick={() => setViewMode('code')} style={{ padding: '0.3rem 0.6rem', border: 'none', background: viewMode === 'code' ? 'var(--primary)' : 'transparent', color: viewMode === 'code' ? '#000' : '#fff', cursor: 'pointer', borderRadius: '2px' }}>Code</button>
-                <button onClick={() => setViewMode('builder')} style={{ padding: '0.3rem 0.6rem', border: 'none', background: viewMode === 'builder' ? 'var(--primary)' : 'transparent', color: viewMode === 'builder' ? '#000' : '#fff', cursor: 'pointer', borderRadius: '2px' }}>Visual Builder</button>
-              </div>
-              
-              {viewMode === 'code' ? (
-                <Editor
-                  height="100%"
-                  defaultLanguage={language}
-                  language={language}
-                  theme="vs-dark"
-                  value={code}
-                  onChange={(val) => setCode(val || '')}
-                  options={{
-                    minimap: { enabled: false },
-                    fontSize: 14,
-                    wordWrap: 'on',
-                    scrollBeyondLastLine: false,
-                    padding: { top: 16 },
-                    automaticLayout: true
-                  }}
-                />
-              ) : (
-                <div style={{ height: '100%', padding: '0', overflow: 'hidden' }}>
-                  <CircuitBuilder 
-                    onCodeGenerated={setCode} 
-                    socket={socket}
-                    roomId={roomId}
-                    username={localStorage.getItem('quantumEdgeUser') || `User_${Math.floor(Math.random()*1000)}`}
-                  />
-                </div>
-              )}
+        {/* Main Workspace */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* Top Header */}
+          <div className="lab-header" style={{ padding: '0.5rem 1rem', background: 'rgba(0,0,0,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <button onClick={() => navigate(`/tutorial/${module.id}`)} style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer' }}>← Back</button>
+              <h2 style={{ margin: 0, fontSize: '1.1rem' }}>{module.title}</h2>
             </div>
-          }
-          second={
-            /* ---- OUTPUT PANELS ---- */
-            <div style={{
-              height: '100%',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'rgba(255,255,255,0.03)',
-            }}>
-              <ResizableSplit
-                direction="vertical"
-                initialRatio={55}
-                storageKey="qe-output-split"
-                first={
-                  /* Circuit Visualizer */
-                  <div className="tour-visualizer" style={{ height: '100%', padding: '1rem', overflow: 'auto', boxSizing: 'border-box' }}>
-                    <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', color: 'rgba(255,255,255,0.5)' }}>
-                      Circuit Visualizer
-                    </h3>
-                    <div className="diagram-container" style={{ minHeight: '60px' }}>
-                      {output && output.diagram ? (
-                        <pre className="circuit-diagram">{output.diagram}</pre>
-                      ) : (
-                        <span className="placeholder-text">Run simulation to see circuit</span>
-                      )}
-                    </div>
-                  </div>
-                }
-                second={
-                  /* Integrated Terminal */
-                  <div className="tour-terminal" style={{ height: '100%', padding: '1rem', overflow: 'auto', boxSizing: 'border-box' }}>
-                    <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', color: 'rgba(255,255,255,0.5)' }}>
-                      Integrated Terminal
-                    </h3>
-                    <div className="terminal" style={{ minHeight: '40px' }}>
-                      {aiFeedback && (
-                        <div className="ai-feedback">
-                          <strong>✨ AI Reviewer:</strong>
-                          <p>{aiFeedback}</p>
-                        </div>
-                      )}
-                      {output ? (
-                        <div className="output-text" style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-                          {output.output && output.output.trim() !== '' && (
-                            <div className="stdout-text" style={{ marginBottom: '1rem' }}>{output.output}</div>
-                          )}
-                          {output.counts && (
-                            <div className="counts-text" style={{ marginTop: '1rem', width: '100%', maxWidth: '800px', margin: '1rem auto' }}>
-                              <ProbabilityHistogram counts={output.counts} />
-                            </div>
-                          )}
-                          {output.error && (
-                            <div className="error-text" style={{ color: '#ff5555', marginTop: '0.5rem' }}>
-                              <strong>Error:</strong> {output.error}
-                            </div>
-                          )}
-                          {output.status && !output.counts && !output.error && (!output.output || output.output.trim() === '') && (
-                            <div style={{ color: '#888' }}>{output.status}</div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="placeholder-text">Awaiting execution...</span>
-                      )}
-                    </div>
-                    
-                    <div style={{ marginTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem', height: '400px' }}>
-                      <MultiplayerChat 
-                        socket={socket} 
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <select value={language} onChange={handleLanguageChange} style={{ background: '#222', color: '#fff', border: '1px solid #444', padding: '0.4rem', borderRadius: '4px', fontSize: '0.9rem' }}>
+                <option value="python">Python (Qiskit)</option>
+                <option value="cpp">C++ (QuEST)</option>
+              </select>
+              
+              <select value={noiseModel} onChange={e => setNoiseModel(e.target.value as any)} style={{ background: '#222', color: '#fff', border: '1px solid #444', padding: '0.4rem', borderRadius: '4px', fontSize: '0.9rem' }}>
+                <option value="ideal">Ideal Simulator</option>
+                <option value="depolarizing">Depolarizing Noise</option>
+                <option value="thermal">Thermal Relaxation</option>
+              </select>
+
+              <button 
+                className="run-btn" 
+                onClick={runCode} 
+                disabled={loading}
+                style={{ background: 'var(--primary)', color: '#000', border: 'none', padding: '0.4rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+                {loading ? 'Running...' : '▶ Run'}
+              </button>
+            </div>
+          </div>
+
+          {/* Split Pane Area */}
+          <div style={{ flex: 1, padding: '0.5rem', boxSizing: 'border-box', overflow: 'hidden' }}>
+            <ResizableSplit
+              direction="horizontal"
+              initialRatio={50}
+              storageKey="qe-main-split"
+              first={
+                /* Left side: Editor or Builder */
+                <div className="tour-code-editor" style={{ height: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--panel-bg)', position: 'relative' }}>
+                  {viewMode === 'code' ? (
+                    <Editor
+                      height="100%"
+                      defaultLanguage={language}
+                      language={language}
+                      theme="vs-dark"
+                      value={code}
+                      onChange={(val) => setCode(val || '')}
+                      options={{
+                        minimap: { enabled: false },
+                        fontSize: 14,
+                        wordWrap: 'on',
+                        scrollBeyondLastLine: false,
+                        padding: { top: 16 },
+                        automaticLayout: true
+                      }}
+                    />
+                  ) : (
+                    <div style={{ height: '100%', padding: '0', overflow: 'hidden' }}>
+                      <CircuitBuilder 
+                        onCodeGenerated={setCode} 
+                        socket={socket}
+                        roomId={roomId}
                         username={localStorage.getItem('quantumEdgeUser') || `User_${Math.floor(Math.random()*1000)}`}
-                        defaultRoom={module.id} 
-                        roomId={roomId || module.id}
-                        setRoomId={setRoomId}
                       />
                     </div>
+                  )}
+                </div>
+              }
+              second={
+                /* Right side: Tabbed Output Panel */
+                <div style={{ height: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--panel-bg)', display: 'flex', flexDirection: 'column' }}>
+                  {/* Output Tabs */}
+                  <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid var(--border-color)' }}>
+                    {['visualizer', 'analytics', 'multiplayer', 'terminal'].map(tab => (
+                      <button 
+                        key={tab}
+                        onClick={() => setActiveOutputTab(tab as any)}
+                        style={{
+                          flex: 1,
+                          padding: '0.8rem',
+                          background: activeOutputTab === tab ? 'rgba(255,255,255,0.05)' : 'transparent',
+                          color: activeOutputTab === tab ? 'var(--primary)' : '#888',
+                          border: 'none',
+                          borderBottom: activeOutputTab === tab ? '2px solid var(--primary)' : '2px solid transparent',
+                          cursor: 'pointer',
+                          fontWeight: 'bold',
+                          textTransform: 'capitalize',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {tab}
+                      </button>
+                    ))}
                   </div>
-                }
-              />
-            </div>
-          }
-        />
+
+                  {/* Tab Content */}
+                  <div style={{ flex: 1, overflow: 'auto', padding: '1rem', boxSizing: 'border-box' }}>
+                    
+                    {/* Visualizer Tab */}
+                    {activeOutputTab === 'visualizer' && (
+                      <div className="tour-visualizer" style={{ height: '100%' }}>
+                        {output && output.diagram ? (
+                          <pre className="circuit-diagram" style={{ margin: 0 }}>{output.diagram}</pre>
+                        ) : (
+                          <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#666' }}>Run simulation to see circuit diagram</div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Analytics Tab */}
+                    {activeOutputTab === 'analytics' && (
+                      <div style={{ height: '100%' }}>
+                        {output && output.counts ? (
+                          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                            <ProbabilityHistogram counts={output.counts} />
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#666' }}>Run simulation to see measurement analytics</div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Multiplayer Tab */}
+                    {activeOutputTab === 'multiplayer' && (
+                      <div style={{ height: '100%' }}>
+                        <MultiplayerChat 
+                          socket={socket} 
+                          username={localStorage.getItem('quantumEdgeUser') || `User_${Math.floor(Math.random()*1000)}`}
+                          defaultRoom={module.id} 
+                          roomId={roomId || module.id}
+                          setRoomId={setRoomId}
+                        />
+                      </div>
+                    )}
+
+                    {/* Terminal Tab */}
+                    {activeOutputTab === 'terminal' && (
+                      <div className="tour-terminal" style={{ height: '100%', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                        {aiFeedback && (
+                          <div className="ai-feedback" style={{ marginBottom: '1rem', padding: '1rem', background: 'rgba(100,255,218,0.1)', borderLeft: '4px solid var(--primary)', borderRadius: '4px' }}>
+                            <strong style={{ color: 'var(--primary)' }}>✨ AI Reviewer:</strong>
+                            <p style={{ margin: '0.5rem 0 0 0' }}>{aiFeedback}</p>
+                          </div>
+                        )}
+                        {output ? (
+                          <>
+                            {output.output && output.output.trim() !== '' && (
+                              <div style={{ color: '#ccc' }}>{output.output}</div>
+                            )}
+                            {output.error && (
+                              <div style={{ color: '#ff5555' }}><strong>Error:</strong> {output.error}</div>
+                            )}
+                            {output.status && !output.counts && !output.error && (!output.output || output.output.trim() === '') && (
+                              <div style={{ color: '#888' }}>{output.status}</div>
+                            )}
+                          </>
+                        ) : (
+                          <div style={{ color: '#666' }}>Awaiting execution...</div>
+                        )}
+                      </div>
+                    )}
+
+                  </div>
+                </div>
+              }
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

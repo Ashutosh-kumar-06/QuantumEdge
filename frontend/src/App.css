@@ -32,6 +32,9 @@
   --success: #00ff88;
   /* A bright red color used to indicate errors, warnings, and danger states */
   --danger: #ff4757;
+  /* Dark panels and borders for IDE */
+  --panel-bg: rgba(15, 17, 26, 0.6);
+  --border-color: rgba(255, 255, 255, 0.1);
 }
 
 /* 
