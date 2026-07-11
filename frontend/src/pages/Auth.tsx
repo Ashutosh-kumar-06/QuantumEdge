@@ -101,7 +101,7 @@ export default function Auth() {
             required
             style={{ padding: '0.8rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.2)', color: '#fff' }}
           />
-          <button className="start-btn" type="submit" style={{ width: '100%', marginTop: '0.5rem', borderRadius: '24px' }}>
+          <button className="start-btn" type="submit" style={{ width: '100%', marginTop: '0.5rem', borderRadius: '24px', padding: '0.8rem' }}>
             {mode === 'login' ? 'Sign In' : 'Sign Up'}
           </button>
         </form>
