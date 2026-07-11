@@ -7,9 +7,10 @@
 
   <p>
     <img alt="Docker" src="https://img.shields.io/badge/Docker-Enabled-blue?style=for-the-badge&logo=docker" />
-    <img alt="React" src="https://img.shields.io/badge/React-18.x-61DAFB?style=for-the-badge&logo=react&logoColor=black" />
+    <img alt="React" src="https://img.shields.io/badge/React-19.x-61DAFB?style=for-the-badge&logo=react&logoColor=black" />
     <img alt="Python" src="https://img.shields.io/badge/Qiskit-Python-3776AB?style=for-the-badge&logo=python&logoColor=white" />
     <img alt="C++" src="https://img.shields.io/badge/QuEST-C++-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white" />
+    <img alt="Redis" src="https://img.shields.io/badge/Redis-Rate%20Limiting-DC382D?style=for-the-badge&logo=redis&logoColor=white" />
   </p>
 </div>
 
@@ -23,61 +24,249 @@ QuantumEdge is a comprehensive, interactive learning platform designed to take s
 
 ## 🚀 Key Features
 
-*   🧠 **10 Comprehensive Modules**: Learn everything from Linear Algebra to VQE and Shor's Algorithm.
-*   💻 **Interactive Coding Lab**: An embedded VS Code-style editor (Monaco) with live code execution.
-*   ⚛️ **Dual Language Support**: Write in **Python (Qiskit)** or **C++ (QuEST)**.
-*   📈 **Live Circuit Visualizer**: Watch your gates trace through the circuit dynamically as you code.
-*   🤖 **AI Code Reviewer**: Integrated AI that analyzes your quantum code and provides feedback.
-*   🔒 **Optional Authentication**: Sign in via Email, Google, or GitHub, or stay anonymous with local storage tracking.
+| Feature | Description |
+|:---|:---|
+| 🧠 **10 Comprehensive Modules** | Linear Algebra → VQE → Shor's Algorithm |
+| 💻 **Interactive Coding Lab** | VS Code-style Monaco editor with resizable panels |
+| ⚛️ **Dual Language Support** | Python (Qiskit) and C++ (QuEST) |
+| 📈 **Live Circuit Visualizer** | Watch your gates trace through the circuit dynamically |
+| 🤖 **AI Code Reviewer** | Gemini-powered analysis of your quantum code |
+| 🔒 **Optional Authentication** | Email, Google, or GitHub — or stay anonymous |
+| 🛡️ **Rate Limiting** | Redis-backed sliding window per endpoint |
+| 📄 **Paginated APIs** | Offset-based pagination with metadata |
+| 🐳 **Sandboxed Execution** | Docker-out-of-Docker with network isolation |
 
 <br />
 
 ## 🛠️ Architecture
 
-QuantumEdge is built with a highly scalable, distributed microservices architecture using Docker.
+QuantumEdge is built with a scalable, distributed microservices architecture using Docker Compose.
 
-| Service | Technology | Description |
-| :--- | :--- | :--- |
-| **Frontend** | React, Vite, TS | Glassmorphic UI with Markdown rendering and Monaco editor. |
-| **API Gateway** | Node.js, Express | Handles routing, authentication, and job queuing. |
-| **Python Worker** | Python, Qiskit | Secure sandbox that executes user Qiskit code. |
-| **C++ Worker** | C++, QuEST | High-performance state-vector simulator for C++ code. |
-| **Database** | MongoDB | Stores curriculum content and user data. |
-| **Message Broker**| RabbitMQ | Distributes simulation jobs to the workers asynchronously. |
-| **Cache** | Redis | Caches job results for lightning-fast retrievals. |
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        CLIENT BROWSER                           │
+│                    (React + Vite + TypeScript)                   │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ HTTP / REST
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      API GATEWAY (Express)                      │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────────┐ │
+│  │ Rate Limiter │  │  Pagination  │  │   Route Handlers       │ │
+│  │  (Redis)     │  │  Middleware   │  │  /curriculum /simulate │ │
+│  └──────┬──────┘  └──────────────┘  └────────────┬───────────┘ │
+│         │                                         │             │
+│         ▼                                         ▼             │
+│  ┌─────────────┐                          ┌─────────────┐      │
+│  │    Redis     │                          │  RabbitMQ   │      │
+│  │  (Cache +    │                          │  (Message   │      │
+│  │  Rate Limit) │                          │   Broker)   │      │
+│  └─────────────┘                          └──────┬──────┘      │
+└──────────────────────────────────────────────────┼──────────────┘
+                                                   │
+                      ┌────────────────────────────┼────────┐
+                      │                            │        │
+                      ▼                            ▼        │
+           ┌──────────────────┐        ┌────────────────┐   │
+           │  Python Worker   │        │   C++ Worker   │   │
+           │  (Qiskit)        │        │   (QuEST)      │   │
+           │                  │        │                │   │
+           │  ┌────────────┐  │        │  ┌──────────┐  │   │
+           │  │  Sandbox   │  │        │  │ Sandbox  │  │   │
+           │  │  Container │  │        │  │Container │  │   │
+           │  └────────────┘  │        │  └──────────┘  │   │
+           └──────────────────┘        └────────────────┘   │
+                                                            │
+                      ┌─────────────────────────────────────┘
+                      ▼
+           ┌──────────────────┐
+           │     MongoDB      │
+           │  (Courses, Jobs, │
+           │   Users)         │
+           └──────────────────┘
+```
+
+### Service Details
+
+| Service | Technology | Port | Description |
+|:---|:---|:---|:---|
+| **Frontend** | React 19, Vite, TypeScript | 5173 | Glassmorphic UI with Monaco editor and resizable panels |
+| **API Gateway** | Node.js, Express 5 | 4000 | REST API with rate limiting, pagination, job queuing |
+| **Python Worker** | Python 3.10, Qiskit | — | Sandboxed Qiskit code execution via Docker-out-of-Docker |
+| **C++ Worker** | Python + g++, QuEST | — | Compiles and runs QuEST C++ code in isolated containers |
+| **MongoDB** | Mongo 7 | 27017 | Stores curriculum, user progress, and simulation jobs |
+| **RabbitMQ** | RabbitMQ 3 | 5672 | Async message broker for job distribution |
+| **Redis** | Redis Alpine | 6379 | Rate limiting counters and caching |
+
+### Inter-Service Communication
+
+| Path | Protocol | Pattern | Why |
+|:---|:---|:---|:---|
+| Frontend → API Gateway | HTTP/REST | Request-Response | Standard web API |
+| API Gateway → Workers | AMQP (RabbitMQ) | Async Pub/Sub | Jobs take 5-15s; async is correct |
+| Workers → API Gateway | AMQP (RabbitMQ) | Async Pub/Sub | Results pushed back via queue |
+| API Gateway → Redis | TCP | Request-Response | Rate limit counter reads/writes |
+| API Gateway → MongoDB | TCP | Request-Response | Database CRUD |
+
+> **Why not gRPC?** The simulation workers run long-running jobs (5-15 seconds). RabbitMQ's async fire-and-forget pattern is the correct choice — gRPC would block API threads. gRPC would only benefit a future low-latency service (e.g., <50ms circuit validation).
+
+<br />
+
+## 🛡️ Rate Limiting
+
+All API endpoints are protected by Redis-backed sliding window rate limiters.
+
+| Endpoint | Limit | Window | Reason |
+|:---|:---|:---|:---|
+| `POST /api/simulate` | 10 req | 1 min | Spawns Docker containers |
+| `POST /api/review` | 5 req | 1 min | Calls external Gemini API |
+| `GET /api/curriculum` | 60 req | 1 min | Light database read |
+| `GET /api/job/:id` | 120 req | 1 min | Frontend polling |
+| `GET /api/jobs` | 30 req | 1 min | Paginated list |
+| `GET /api/progress/:user` | 30 req | 1 min | User data read |
+
+**Headers** returned on every response:
+```
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 7
+X-RateLimit-Reset: 1720700000
+```
+
+When exceeded, returns `429 Too Many Requests` with `Retry-After` header.
+
+<br />
+
+## 📄 Paginated API Endpoints
+
+### `GET /api/jobs`
+```bash
+# Basic pagination
+curl "http://localhost:4000/api/jobs?page=1&limit=10"
+
+# With filters
+curl "http://localhost:4000/api/jobs?status=completed&language=python&page=2&limit=5"
+
+# Custom sort
+curl "http://localhost:4000/api/jobs?sort=createdAt&order=asc"
+```
+
+Response:
+```json
+{
+  "jobs": [
+    { "jobId": "abc123", "language": "python", "status": "completed", "createdAt": "..." }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 47,
+    "totalPages": 5,
+    "hasNext": true,
+    "hasPrev": false
+  }
+}
+```
+
+### `GET /api/curriculum` (optional pagination)
+```bash
+# All modules (backward compatible)
+curl "http://localhost:4000/api/curriculum"
+
+# Paginated
+curl "http://localhost:4000/api/curriculum?page=1&limit=5"
+```
+
+<br />
+
+## 🏗️ Quick Start (Local Development)
+
+```bash
+# Clone
+git clone https://github.com/Ashutosh-kumar-06/QuantumEdge.git
+cd QuantumEdge
+
+# Start all services
+docker compose up -d --build
+
+# Seed the database
+docker compose exec api-gateway node seed.js
+
+# Open browser
+# Frontend: http://localhost:5173
+# API:      http://localhost:4000/health
+```
 
 <br />
 
 ## ☁️ Deployment (AWS EC2 Free Tier)
 
-Ready to launch this to the world? We've prepared an automated script that installs all dependencies and spins up the platform on a fresh AWS EC2 instance.
+1. Provision **Ubuntu 24.04 LTS** EC2 instance (`t2.micro` / Free Tier eligible, 30 GB storage)
+2. SSH in and install Docker:
+   ```bash
+   sudo apt update && sudo apt install -y docker.io docker-compose-v2
+   sudo usermod -aG docker ubuntu && newgrp docker
+   ```
+3. Clone and deploy:
+   ```bash
+   git clone https://github.com/Ashutosh-kumar-06/QuantumEdge.git
+   cd QuantumEdge
+   docker compose up -d --build
+   docker compose exec api-gateway node seed.js
+   ```
+4. Get a **free DNS** at [duckdns.org](https://www.duckdns.org) → point to your EC2 IP
+5. Set up **Nginx + Let's Encrypt** for free HTTPS
 
-1.  Provision an **Ubuntu 22.04 LTS** EC2 instance (t2.micro / Free Tier eligible).
-2.  SSH into your instance:
-    ```bash
-    ssh -i your-key.pem ubuntu@<your-ec2-ip>
-    ```
-3.  Clone the repository:
-    ```bash
-    git clone https://github.com/Ashutosh-kumar-06/QuantumEdge.git
-    cd QuantumEdge
-    ```
-4.  Run the automated deployment script:
-    ```bash
-    chmod +x setup-ec2.sh
-    ./setup-ec2.sh
-    ```
-5.  Open your browser and navigate to `http://<your-ec2-ip>:5173`.
+> See [deployment_guide.md](./docs/deployment_guide.md) for the full step-by-step guide.
 
 <br />
 
 ## 🔑 Firebase Authentication (Optional)
 
 QuantumEdge supports Firebase Authentication for Google, GitHub, and Email sign-ins.
-To enable real authentication, update the `frontend/src/firebase.ts` file with your own Firebase project credentials.
+To enable real authentication, update `frontend/src/firebase.ts` with your Firebase project credentials.
+
+<br />
+
+## 📁 Project Structure
+
+```
+QuantumEdge/
+├── frontend/                 # React + Vite + TypeScript
+│   ├── src/
+│   │   ├── pages/            # Dashboard, Tutorial, Lab, Auth
+│   │   ├── components/       # MiniSimulator, Bloch Sphere
+│   │   └── context/          # ProgressContext (localStorage)
+│   └── Dockerfile
+├── api-gateway/              # Express.js REST API
+│   ├── index.js              # Main server with rate limiting
+│   ├── middleware/
+│   │   ├── rateLimiter.js    # Redis-backed rate limiter
+│   │   └── paginate.js       # Pagination helper
+│   ├── models/               # Mongoose schemas
+│   └── Dockerfile
+├── simulation-worker/        # Python Qiskit worker
+│   ├── worker.py             # RabbitMQ consumer
+│   ├── sandbox_runner.py     # Sandboxed code execution
+│   └── Dockerfile
+├── cpp-worker/               # C++ QuEST worker
+│   ├── worker.py
+│   └── Dockerfile
+├── docker-compose.yml        # Full stack orchestration
+└── README.md
+```
+
+<br />
+
+## 📜 License
+
+This project is open source and available under the [MIT License](LICENSE).
 
 <br />
 
 <div align="center">
-  <i>Built with passion for the future of Quantum Software Engineering.</i>
+  <p>Built with ❤️ by <a href="https://github.com/Ashutosh-kumar-06">Ashutosh Kumar</a></p>
+  <p>
+    <img alt="Stars" src="https://img.shields.io/github/stars/Ashutosh-kumar-06/QuantumEdge?style=social" />
+    <img alt="Forks" src="https://img.shields.io/github/forks/Ashutosh-kumar-06/QuantumEdge?style=social" />
+  </p>
 </div>

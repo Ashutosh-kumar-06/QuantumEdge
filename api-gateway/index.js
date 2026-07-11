@@ -1,231 +1,355 @@
-// Import Express framework to create the web server
+// ============================================================================
+// QuantumEdge API Gateway — index.js
+// Central backend server handling:
+//   - Course curriculum API
+//   - Code simulation job queue (via RabbitMQ)
+//   - AI-powered code review (via Gemini)
+//   - User progress tracking
+//   - Rate limiting (Redis-backed)
+//   - Paginated endpoints
+// ============================================================================
+
 const express = require('express');
-// Import CORS middleware to allow the frontend to communicate with this API
 const cors = require('cors');
-// Import AMQP library to communicate with RabbitMQ message broker
 const amqp = require('amqplib');
-// Import Mongoose to interact with the MongoDB database
 const mongoose = require('mongoose');
-// Import the Google Generative AI SDK for AI code review functionality
+const { createClient } = require('redis');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// Import the database schemas (models)
-const Course = require('./models/Course'); // Curriculum structure
-const User = require('./models/User'); // User progress tracking
-const Job = require('./models/Job'); // Simulation job queue tracking
+// Models
+const Course = require('./models/Course');
+const User = require('./models/User');
+const Job = require('./models/Job');
 
-// Initialize the Express application
+// Middleware
+const { createRateLimiter } = require('./middleware/rateLimiter');
+const { parsePagination, buildPaginationMeta } = require('./middleware/paginate');
+
+// Initialize Express
 const app = express();
-// Enable CORS for all routes
 app.use(cors());
-// Middleware to parse incoming JSON requests
 app.use(express.json());
 
-// Set up configuration variables from environment or use default values
+// Configuration
 const PORT = process.env.PORT || 4000;
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672';
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://root:examplepassword@localhost:27017/quantumedge?authSource=admin';
+const REDIS_URL = process.env.REDIS_URL || 'redis://redis:6379';
 
-// Initialize the Gemini AI client with an API key
+// AI client
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'fake-key');
 
-// Global variable to hold the RabbitMQ channel
+// Global connections
 let channel = null;
+let redisClient = null;
 
-/**
- * Connects to the RabbitMQ message queue and sets up listeners
- */
+// ============================================================================
+// REDIS CONNECTION
+// ============================================================================
+async function connectRedis() {
+  try {
+    redisClient = createClient({ url: REDIS_URL });
+    redisClient.on('error', (err) => console.error('Redis error:', err.message));
+    await redisClient.connect();
+    console.log('Connected to Redis');
+  } catch (error) {
+    console.error('Redis connection failed:', error.message);
+    // Fail open — rate limiting will be skipped if Redis is unavailable
+  }
+}
+
+// ============================================================================
+// RABBITMQ CONNECTION
+// ============================================================================
 async function connectQueue() {
-    try {
-        // Create a connection to RabbitMQ
-        const connection = await amqp.connect(RABBITMQ_URL);
-        // Create a communication channel
-        channel = await connection.createChannel();
-        // Ensure the queues exist. 'durable: false' means queues are lost on restart
-        await channel.assertQueue('quantum_jobs', { durable: false }); // Python Qiskit jobs
-        await channel.assertQueue('cpp_jobs', { durable: false }); // C++ QuEST jobs
-        await channel.assertQueue('job_results', { durable: false }); // Results back from workers
-        
-        // Listen for messages arriving on the 'job_results' queue
-        channel.consume('job_results', async (msg) => {
-            if (msg !== null) {
-                try {
-                    // Parse the JSON message sent by the worker
-                    const data = JSON.parse(msg.content.toString());
-                    const { jobId, result } = data;
-                    
-                    // Determine status based on whether the result contains an error
-                    const status = result.error ? 'failed' : 'completed';
-                    // Update the job record in MongoDB with the final status and result
-                    await Job.findOneAndUpdate(
-                        { jobId },
-                        { status, result }
-                    );
-                    // Acknowledge the message so RabbitMQ removes it from the queue
-                    channel.ack(msg);
-                } catch (err) {
-                    console.error("Error processing job_results:", err);
-                    // Negatively acknowledge the message if something went wrong
-                    channel.nack(msg);
-                }
-            }
-        });
-        
-        console.log('Connected to RabbitMQ and listening to job_results');
-    } catch (error) {
-        // If connection fails, wait 5 seconds and try again
-        console.error('RabbitMQ connection error, retrying in 5s...', error);
-        setTimeout(connectQueue, 5000);
-    }
+  try {
+    const connection = await amqp.connect(RABBITMQ_URL);
+    channel = await connection.createChannel();
+    await channel.assertQueue('quantum_jobs', { durable: false });
+    await channel.assertQueue('cpp_jobs', { durable: false });
+    await channel.assertQueue('job_results', { durable: false });
+
+    // Listen for results from workers
+    channel.consume('job_results', async (msg) => {
+      if (msg !== null) {
+        try {
+          const data = JSON.parse(msg.content.toString());
+          const { jobId, result } = data;
+          const status = result.error ? 'failed' : 'completed';
+          await Job.findOneAndUpdate({ jobId }, { status, result });
+          channel.ack(msg);
+        } catch (err) {
+          console.error("Error processing job_results:", err);
+          channel.nack(msg);
+        }
+      }
+    });
+
+    console.log('Connected to RabbitMQ and listening to job_results');
+  } catch (error) {
+    console.error('RabbitMQ connection error, retrying in 5s...', error.message);
+    setTimeout(connectQueue, 5000);
+  }
 }
 
-/**
- * Connects to the MongoDB database
- */
+// ============================================================================
+// MONGODB CONNECTION
+// ============================================================================
 async function connectDB() {
-    try {
-        // Connect to MongoDB using the connection URI
-        await mongoose.connect(MONGO_URI);
-        console.log('Connected to MongoDB');
-    } catch (error) {
-        console.error('MongoDB connection error', error);
-    }
+  try {
+    await mongoose.connect(MONGO_URI);
+    console.log('Connected to MongoDB');
+  } catch (error) {
+    console.error('MongoDB connection error', error);
+  }
 }
 
-// ---------------------------------------------------------
+// ============================================================================
+// RATE LIMITERS (applied per-route with different thresholds)
+// ============================================================================
+
+// Lazy-init rate limiters after Redis connects
+function getRateLimiters() {
+  return {
+    // Heavy endpoints — strict limits
+    simulate: createRateLimiter(redisClient, {
+      windowMs: 60 * 1000,
+      max: 10,
+      keyPrefix: 'rl:simulate',
+      message: 'Simulation rate limit exceeded. Max 10 requests per minute.',
+    }),
+    review: createRateLimiter(redisClient, {
+      windowMs: 60 * 1000,
+      max: 5,
+      keyPrefix: 'rl:review',
+      message: 'AI review rate limit exceeded. Max 5 requests per minute.',
+    }),
+    // Read endpoints — generous limits
+    curriculum: createRateLimiter(redisClient, {
+      windowMs: 60 * 1000,
+      max: 60,
+      keyPrefix: 'rl:curriculum',
+    }),
+    jobPoll: createRateLimiter(redisClient, {
+      windowMs: 60 * 1000,
+      max: 120,
+      keyPrefix: 'rl:jobpoll',
+    }),
+    progress: createRateLimiter(redisClient, {
+      windowMs: 60 * 1000,
+      max: 30,
+      keyPrefix: 'rl:progress',
+    }),
+    jobsList: createRateLimiter(redisClient, {
+      windowMs: 60 * 1000,
+      max: 30,
+      keyPrefix: 'rl:jobslist',
+    }),
+  };
+}
+
+// ============================================================================
 // API ENDPOINTS
-// ---------------------------------------------------------
+// ============================================================================
 
 /**
  * GET /api/curriculum
- * Returns the full course curriculum from the database.
+ * Returns course curriculum. Supports optional pagination.
+ *   ?page=1&limit=5  → paginated modules
+ *   (no params)      → all modules (backward-compatible)
  */
 app.get('/api/curriculum', async (req, res) => {
-    try {
-        // Find the specific course by its ID
-        const course = await Course.findOne({ courseId: 'quantum-dev-101' });
-        // Return the course as JSON, or an empty array if not found
-        res.json(course || { modules: [] });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
+  try {
+    // Apply rate limiting
+    const rl = getRateLimiters();
+    await new Promise((resolve) => rl.curriculum(req, res, resolve));
+    if (res.headersSent) return; // 429 was already sent
+
+    const course = await Course.findOne({ courseId: 'quantum-dev-101' });
+    if (!course) return res.json({ modules: [] });
+
+    // If pagination params are provided, paginate the modules array
+    if (req.query.page || req.query.limit) {
+      const { page, limit, skip } = parsePagination(req.query);
+      const allModules = course.modules || [];
+      const paginatedModules = allModules.slice(skip, skip + limit);
+      return res.json({
+        modules: paginatedModules,
+        pagination: buildPaginationMeta(page, limit, allModules.length),
+      });
     }
+
+    // Default: return everything (backward-compatible)
+    res.json(course);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 /**
  * GET /api/progress/:username
- * Returns the progress data for a specific user.
+ * Returns progress data for a specific user.
  */
 app.get('/api/progress/:username', async (req, res) => {
-    try {
-        // Find the user by their username
-        const user = await User.findOne({ username: req.params.username });
-        // Return the user's progress array, or an empty array if not found
-        res.json(user ? user.progress : []);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
+  try {
+    const rl = getRateLimiters();
+    await new Promise((resolve) => rl.progress(req, res, resolve));
+    if (res.headersSent) return;
+
+    const user = await User.findOne({ username: req.params.username });
+    res.json(user ? user.progress : []);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 /**
  * POST /api/review
- * Sends user code to the AI (Gemini) for a code review.
+ * Sends user code to Gemini AI for code review.
+ * Rate limited: 5 requests/minute per IP.
  */
 app.post('/api/review', async (req, res) => {
+  try {
+    const rl = getRateLimiters();
+    await new Promise((resolve) => rl.review(req, res, resolve));
+    if (res.headersSent) return;
+
     const { code } = req.body;
-    try {
-        // If no API key is provided, return a placeholder message
-        if (!process.env.GEMINI_API_KEY) {
-            return res.json({ feedback: "AI Reviewer is disabled (no API key provided)." });
-        }
-        
-        // Select the specific Gemini model to use
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        // Construct the prompt giving the AI instructions and the user's code
-        const prompt = `You are a Quantum Computing AI Code Reviewer. 
-        Analyze the following Qiskit/Python code. 
-        Provide automated feedback on circuit gate optimization and potential qubit decoherence issues.
-        Keep the feedback concise, actionable, and less than 150 words. 
-        Code: \n\n${code}`;
-        
-        // Generate content by calling the Gemini API
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        // Extract the text from the AI's response
-        const text = response.text();
-        
-        // Return the feedback to the frontend
-        res.json({ feedback: text });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
+    if (!process.env.GEMINI_API_KEY) {
+      return res.json({ feedback: "AI Reviewer is disabled (no API key provided)." });
     }
+
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const prompt = `You are a Quantum Computing AI Code Reviewer. 
+    Analyze the following Qiskit/Python code. 
+    Provide automated feedback on circuit gate optimization and potential qubit decoherence issues.
+    Keep the feedback concise, actionable, and less than 150 words. 
+    Code: \n\n${code}`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    res.json({ feedback: text });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 /**
  * POST /api/simulate
- * Receives code from the user, creates a job, and puts it in the queue for a worker.
+ * Creates a simulation job and puts it in the RabbitMQ queue.
+ * Rate limited: 10 requests/minute per IP.
  */
 app.post('/api/simulate', async (req, res) => {
-    // Extract code and language from the request body
+  try {
+    const rl = getRateLimiters();
+    await new Promise((resolve) => rl.simulate(req, res, resolve));
+    if (res.headersSent) return;
+
     const { code, language } = req.body;
     if (!code) {
-        return res.status(400).json({ error: 'No code provided' });
+      return res.status(400).json({ error: 'No code provided' });
     }
-    
-    // Generate a random job ID (e.g., 'a1b2c3d')
+
     const jobId = Math.random().toString(36).substring(7);
-    // Create a job object
     const job = { jobId, code, language: language || 'python' };
-    // Determine which queue to use based on the programming language
     const queueName = job.language === 'cpp' ? 'cpp_jobs' : 'quantum_jobs';
-    
+
     if (channel) {
-        try {
-            // Save the new job to the database with a 'queued' status
-            await Job.create({ jobId, language: job.language, code });
-            // Send the job to the appropriate RabbitMQ queue as a JSON string
-            channel.sendToQueue(queueName, Buffer.from(JSON.stringify(job)));
-            // Respond to the frontend immediately letting them know the job is queued
-            return res.json({ jobId, status: 'queued', queue: queueName });
-        } catch (e) {
-            return res.status(500).json({ error: 'Failed to create job' });
-        }
+      await Job.create({ jobId, language: job.language, code });
+      channel.sendToQueue(queueName, Buffer.from(JSON.stringify(job)));
+      return res.json({ jobId, status: 'queued', queue: queueName });
     } else {
-        // If RabbitMQ is not connected yet, return an error
-        return res.status(503).json({ error: 'Queue not ready' });
+      return res.status(503).json({ error: 'Queue not ready' });
     }
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to create job' });
+  }
 });
 
 /**
  * GET /api/job/:jobId
- * Allows the frontend to check the status and result of a simulation job.
+ * Check the status of a single simulation job.
+ * Rate limited: 120 requests/minute per IP (used for polling).
  */
 app.get('/api/job/:jobId', async (req, res) => {
-    try {
-        // Find the job by its unique ID
-        const job = await Job.findOne({ jobId: req.params.jobId });
-        if (!job) return res.status(404).json({ error: 'Job not found' });
-        // Return the job details (including status and results if completed)
-        res.json(job);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
+  try {
+    const rl = getRateLimiters();
+    await new Promise((resolve) => rl.jobPoll(req, res, resolve));
+    if (res.headersSent) return;
+
+    const job = await Job.findOne({ jobId: req.params.jobId });
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    res.json(job);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/**
+ * GET /api/jobs
+ * Paginated list of all simulation jobs.
+ *   ?page=1&limit=10           → page 1, 10 per page
+ *   ?status=completed          → filter by status
+ *   ?language=python           → filter by language
+ *   ?sort=createdAt&order=desc → sort (default: newest first)
+ */
+app.get('/api/jobs', async (req, res) => {
+  try {
+    const rl = getRateLimiters();
+    await new Promise((resolve) => rl.jobsList(req, res, resolve));
+    if (res.headersSent) return;
+
+    const { page, limit, skip } = parsePagination(req.query);
+
+    // Build filter
+    const filter = {};
+    if (req.query.status) filter.status = req.query.status;
+    if (req.query.language) filter.language = req.query.language;
+
+    // Sort
+    const sortField = req.query.sort || 'createdAt';
+    const sortOrder = req.query.order === 'asc' ? 1 : -1;
+
+    // Query with pagination
+    const [jobs, total] = await Promise.all([
+      Job.find(filter)
+        .sort({ [sortField]: sortOrder })
+        .skip(skip)
+        .limit(limit)
+        .select('jobId language status createdAt -_id'),  // exclude code for list view
+      Job.countDocuments(filter),
+    ]);
+
+    res.json({
+      jobs,
+      pagination: buildPaginationMeta(page, limit, total),
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 /**
  * GET /health
- * A simple endpoint to check if the server is running.
+ * Health check endpoint showing status of all connections.
  */
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/health', (req, res) => res.json({
+  status: 'ok',
+  services: {
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    rabbitmq: channel ? 'connected' : 'disconnected',
+    redis: redisClient?.isOpen ? 'connected' : 'disconnected',
+  },
+}));
 
-// ---------------------------------------------------------
+// ============================================================================
 // SERVER STARTUP
-// ---------------------------------------------------------
-
-// Start listening for incoming HTTP requests on the specified port
+// ============================================================================
 app.listen(PORT, async () => {
-    console.log(`API Gateway running on port ${PORT}`);
-    // Connect to MongoDB
-    await connectDB();
-    // Connect to RabbitMQ
-    await connectQueue();
+  console.log(`API Gateway running on port ${PORT}`);
+  await connectDB();
+  await connectRedis();
+  await connectQueue();
 });
