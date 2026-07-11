@@ -35,7 +35,7 @@ export default function CircuitBuilder({ onCodeGenerated }: CircuitBuilderProps)
       let hasGates = false;
       let momentCode = '';
       for (let q = 0; q < numQubits; q++) {
-        const gate = moments[m][q];
+        const gate = moments[m] ? moments[m][q] : null;
         if (gate === 'H') momentCode += `qc.h(${q})\n`;
         if (gate === 'X') momentCode += `qc.x(${q})\n`;
         if (gate === 'Y') momentCode += `qc.y(${q})\n`;
