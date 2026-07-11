@@ -195,7 +195,7 @@ export default function Lab() {
 
   // Fetch module data
   useEffect(() => {
-    fetch('http://localhost:4000/api/curriculum')
+    fetch(`${import.meta.env.VITE_API_URL}/api/curriculum`)
       .then(res => res.json())
       .then(data => {
         if (data && data.modules) {
@@ -224,7 +224,7 @@ export default function Lab() {
     setOutput(null);
     setAiFeedback('');
     try {
-      const response = await fetch('http://localhost:4000/api/simulate', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, language })
@@ -233,7 +233,7 @@ export default function Lab() {
       setOutput({ status: 'Processing...', jobId: data.jobId });
       const pollInterval = setInterval(async () => {
         try {
-          const pollRes = await fetch(`http://localhost:4000/api/job/${data.jobId}`);
+          const pollRes = await fetch(`${import.meta.env.VITE_API_URL}/api/job/${data.jobId}`);
           const jobData = await pollRes.json();
           if (jobData.status === 'completed' || jobData.status === 'failed') {
             clearInterval(pollInterval);
@@ -264,7 +264,7 @@ export default function Lab() {
   const requestAiReview = async () => {
     setReviewLoading(true);
     try {
-      const response = await fetch('http://localhost:4000/api/review', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code })

@@ -85,7 +85,7 @@ export default function Tutorial() {
   // different module (the 'id' in the URL changes).
   useEffect(() => {
     // Make an HTTP GET request to the curriculum API endpoint
-    fetch('http://localhost:4000/api/curriculum')
+    fetch(`${import.meta.env.VITE_API_URL}/api/curriculum`)
       // Convert the raw response into a JavaScript object (JSON parsing)
       .then(res => res.json())
       // Process the parsed JSON data

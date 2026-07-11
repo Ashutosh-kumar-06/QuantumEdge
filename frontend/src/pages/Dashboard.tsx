@@ -29,7 +29,7 @@ export default function Dashboard() {
       } catch (e) {}
     }
 
-    fetch('http://localhost:4000/api/curriculum')
+    fetch(`${import.meta.env.VITE_API_URL}/api/curriculum`)
       .then(res => res.json())
       .then(data => {
         if (data && data.modules) setCurriculum(data.modules);
