@@ -11,6 +11,8 @@ import '../App.css';
 import { useProgress } from '../context/ProgressContext';
 import { io } from 'socket.io-client';
 import CircuitBuilder from '../components/CircuitBuilder';
+import { driver } from 'driver.js';
+import 'driver.js/dist/driver.css';
 
 // ============================================================================
 // Custom Resizable Split — built with pure React, no dependencies
@@ -196,6 +198,30 @@ export default function Lab() {
   const [aiFeedback, setAiFeedback] = useState<string>('');
   const [language, setLanguage] = useState<'python' | 'cpp'>('python');
 
+  // Tour Guide using Driver.js
+  useEffect(() => {
+    const hasSeenTour = localStorage.getItem('hasSeenLabTour');
+    if (!hasSeenTour) {
+      setTimeout(() => {
+        const driverObj = driver({
+          showProgress: true,
+          steps: [
+            { element: '.tour-actions', popover: { title: 'Lab Controls', description: 'Switch languages, request AI code reviews, and run your simulations here.', side: 'bottom', align: 'start' } },
+            { element: '.tour-view-toggle', popover: { title: 'Workspace Toggle', description: 'Switch between typing code directly and using our visual drag-and-drop Circuit Builder!', side: 'left', align: 'start' } },
+            { element: '.tour-code-editor', popover: { title: 'Your Workspace', description: 'This is where you write or generate your quantum circuits.', side: 'right', align: 'start' } },
+            { element: '.tour-visualizer', popover: { title: 'Circuit Diagram', description: 'When you run your code, the quantum circuit will automatically be visualized here.', side: 'left', align: 'start' } },
+            { element: '.tour-terminal', popover: { title: 'Terminal', description: 'See real-time standard output and measurement probabilities when you run simulations!', side: 'left', align: 'start' } }
+          ],
+          onDestroyStarted: () => {
+            localStorage.setItem('hasSeenLabTour', 'true');
+            driverObj.destroy();
+          }
+        });
+        driverObj.drive();
+      }, 500); // Wait for UI to settle
+    }
+  }, []);
+
   // Fetch module data
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_URL}/api/curriculum`)
@@ -309,7 +335,7 @@ export default function Lab() {
       <div className="lab-header glass-header">
         <button className="back-btn" onClick={() => navigate(`/tutorial/${module.id}`)}>← Back to Tutorial</button>
         <h2>Lab: {module.title}</h2>
-        <div className="header-actions">
+        <div className="header-actions tour-actions">
           <select className="lang-select" value={language} onChange={handleLanguageChange}>
             <option value="python">Python (Qiskit)</option>
             <option value="cpp">C++ (QuEST)</option>
@@ -355,8 +381,8 @@ export default function Lab() {
           storageKey="qe-main-split"
           first={
             /* Left side: Editor or Builder */
-            <div style={{ height: '100%', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', position: 'relative' }}>
-              <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10, display: 'flex', gap: '0.5rem', background: '#333', padding: '0.2rem', borderRadius: '4px' }}>
+            <div className="tour-code-editor" style={{ height: '100%', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', position: 'relative' }}>
+              <div className="tour-view-toggle" style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10, display: 'flex', gap: '0.5rem', background: '#333', padding: '0.2rem', borderRadius: '4px' }}>
                 <button onClick={() => setViewMode('code')} style={{ padding: '0.3rem 0.6rem', border: 'none', background: viewMode === 'code' ? 'var(--primary)' : 'transparent', color: viewMode === 'code' ? '#000' : '#fff', cursor: 'pointer', borderRadius: '2px' }}>Code</button>
                 <button onClick={() => setViewMode('builder')} style={{ padding: '0.3rem 0.6rem', border: 'none', background: viewMode === 'builder' ? 'var(--primary)' : 'transparent', color: viewMode === 'builder' ? '#000' : '#fff', cursor: 'pointer', borderRadius: '2px' }}>Visual Builder</button>
               </div>
@@ -398,7 +424,7 @@ export default function Lab() {
                 storageKey="qe-output-split"
                 first={
                   /* Circuit Visualizer */
-                  <div style={{ height: '100%', padding: '1rem', overflow: 'auto', boxSizing: 'border-box' }}>
+                  <div className="tour-visualizer" style={{ height: '100%', padding: '1rem', overflow: 'auto', boxSizing: 'border-box' }}>
                     <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', color: 'rgba(255,255,255,0.5)' }}>
                       Circuit Visualizer
                     </h3>
@@ -413,7 +439,7 @@ export default function Lab() {
                 }
                 second={
                   /* Integrated Terminal */
-                  <div style={{ height: '100%', padding: '1rem', overflow: 'auto', boxSizing: 'border-box' }}>
+                  <div className="tour-terminal" style={{ height: '100%', padding: '1rem', overflow: 'auto', boxSizing: 'border-box' }}>
                     <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', color: 'rgba(255,255,255,0.5)' }}>
                       Integrated Terminal
                     </h3>

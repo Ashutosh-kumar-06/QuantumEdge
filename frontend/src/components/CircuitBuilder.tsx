@@ -99,9 +99,12 @@ export default function CircuitBuilder({ onCodeGenerated }: CircuitBuilderProps)
         ))}
       </div>
       
-      <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem' }}>
-        <button onClick={() => setNumMoments(m => m + 1)} style={{ padding: '0.5rem', background: '#333', color: '#fff', border: '1px solid #555', borderRadius: '4px', cursor: 'pointer' }}>+ Add Moment</button>
-        <button onClick={() => setNumQubits(q => q + 1)} style={{ padding: '0.5rem', background: '#333', color: '#fff', border: '1px solid #555', borderRadius: '4px', cursor: 'pointer' }}>+ Add Qubit</button>
+      <div style={{ marginTop: '2rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <button onClick={() => setNumMoments(m => m + 1)} style={{ padding: '0.6rem 1rem', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s' }}>+ Add Moment</button>
+        <button onClick={() => setNumMoments(m => Math.max(1, m - 1))} style={{ padding: '0.6rem 1rem', background: 'rgba(255,255,255,0.05)', color: '#ff6b6b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s' }}>- Remove Moment</button>
+        <div style={{ width: '1rem' }}></div>
+        <button onClick={() => setNumQubits(q => q + 1)} style={{ padding: '0.6rem 1rem', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s' }}>+ Add Qubit</button>
+        <button onClick={() => setNumQubits(q => Math.max(1, q - 1))} style={{ padding: '0.6rem 1rem', background: 'rgba(255,255,255,0.05)', color: '#ff6b6b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s' }}>- Remove Qubit</button>
       </div>
     </div>
   );
