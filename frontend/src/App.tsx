@@ -2,14 +2,13 @@
 // App.tsx — Root Application Component
 // ============================================================================
 
-import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
 import CourseModules from './pages/CourseModules';
 import Tutorial from './pages/Tutorial';
 import Lab from './pages/Lab';
 import Auth from './pages/Auth';
-import LandingPage from './pages/LandingPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import ChatPage from './pages/ChatPage';
 import VideoPage from './pages/VideoPage';
@@ -84,7 +83,7 @@ function App() {
         
         <main className="main-content">
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<Navigate to="/lab/sandbox" replace />} />
             <Route path="/course_modules" element={<CourseModules />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/auth" element={<Auth />} />
