@@ -43,4 +43,42 @@ Your Task:
   }
 }
 
-module.exports = { getQuantumCodeReview };
+async function getQuantumChatResponse(history, newPrompt, codeContext) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is not configured on the server.');
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+  
+  // Format history for Gemini (roles: 'user' or 'model')
+  const formattedHistory = history.map(msg => ({
+    role: msg.role === 'ai' ? 'model' : 'user',
+    parts: [{ text: msg.content }]
+  }));
+
+  const systemPrompt = `You are a brilliant and encouraging Quantum Computing Teaching Assistant.
+The student is currently working on this code:
+\`\`\`
+${codeContext}
+\`\`\`
+Keep your responses helpful, beginner-friendly, under 150 words, and DO NOT give away exact complete solutions.`;
+
+  try {
+    const chat = ai.chats.create({
+      model: 'gemini-2.5-flash',
+      config: {
+        systemInstruction: systemPrompt,
+      },
+      history: formattedHistory
+    });
+
+    const response = await chat.sendMessage({ message: newPrompt });
+    return response.text;
+  } catch (error) {
+    console.error('Gemini Chat Error:', error);
+    throw new Error('Failed to continue chat with AI Tutor.');
+  }
+}
+
+module.exports = { getQuantumCodeReview, getQuantumChatResponse };

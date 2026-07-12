@@ -491,6 +491,28 @@ app.post('/api/review', requireAuth, reviewLimiter, async (req, res) => {
   }
 });
 
+const { getQuantumChatResponse } = require('./services/aiService');
+
+/**
+ * POST /api/chat
+ * Sends follow-up questions to the AI Tutor.
+ */
+app.post('/api/chat', requireAuth, reviewLimiter, async (req, res) => {
+  try {
+    const { history, newPrompt, codeContext } = req.body;
+    
+    if (!process.env.GEMINI_API_KEY && !process.env.OPENAI_API_KEY) {
+      return res.json({ feedback: "AI Tutor is disabled (no API key provided)." });
+    }
+
+    const feedback = await getQuantumChatResponse(history || [], newPrompt, codeContext);
+    res.json({ feedback });
+  } catch (e) {
+    console.error('AI Chat Route Error:', e);
+    res.status(500).json({ error: e.message || 'AI chat failed' });
+  }
+});
+
 /**
  * POST /api/simulate
  * Creates a simulation job and puts it in the RabbitMQ queue.
