@@ -1,5 +1,5 @@
 // ============================================================================
-// Dashboard.tsx — Dashboard Page Component
+// CourseModules.tsx — Course Modules Page Component
 // This page is the main landing page of the QuantumEdge application. It:
 //   1. Fetches the full curriculum (list of learning modules) from the backend API
 //   2. Fetches the student's progress data from the backend API
@@ -13,7 +13,7 @@ import type { Module } from '../types';
 import '../App.css';
 import { useProgress } from '../context/ProgressContext';
 
-export default function Dashboard() {
+export default function CourseModules() {
   const [curriculum, setCurriculum] = useState<Module[]>([]);
   const { isCompleted } = useProgress();
   const [user, setUser] = useState<{email: string, provider: string} | null>(null);

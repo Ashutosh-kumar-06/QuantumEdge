@@ -5,7 +5,7 @@
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
-import Dashboard from './pages/Dashboard';
+import CourseModules from './pages/CourseModules';
 import Tutorial from './pages/Tutorial';
 import Lab from './pages/Lab';
 import Auth from './pages/Auth';
@@ -63,8 +63,8 @@ function App() {
               <li className={location.pathname.startsWith('/lab') ? 'active' : ''}>
                 <Link to="/lab/sandbox">Lab</Link>
               </li>
-              <li className={location.pathname === '/dashboard' ? 'active' : ''}>
-                <Link to="/dashboard">Modules</Link>
+              <li className={location.pathname === '/course_modules' ? 'active' : ''}>
+                <Link to="/course_modules">Modules</Link>
               </li>
               <li className={location.pathname === '/leaderboard' ? 'active' : ''}>
                 <Link to="/leaderboard">Leaderboard</Link>
@@ -85,7 +85,7 @@ function App() {
         <main className="main-content">
           <Routes>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/course_modules" element={<CourseModules />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/tutorial/:id" element={<Tutorial />} />

@@ -145,7 +145,7 @@ export default function LandingPage() {
         </p>
         
         <button 
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate('/course_modules')}
           style={{
             background: 'var(--primary)',
             color: '#0f172a',
