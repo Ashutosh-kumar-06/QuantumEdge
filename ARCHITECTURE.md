@@ -54,8 +54,9 @@ graph TD
 - **Role:** Interactive UI with Monaco editor, markdown rendering, and circuit visualizations.
 - **Why React?** Component-based architecture suits complex interactive pages like the Lab.
 
-### 2. API Gateway (Node.js / Express)
-- **Role:** Central entry point for all API requests. Handles routing, rate limiting, pagination, and queuing jobs.
+### 2. API Gateway (Node.js / Express + Socket.io)
+- **Role:** Central entry point for all API requests and real-time collaboration. Handles HTTP routing, rate limiting, and queuing jobs.
+- **WebSockets:** Uses `socket.io` to manage real-time rooms for Group Chat and Group Video meetings. Broadcasts `cursor_move`, `code_update`, `whiteboard_update`, and `terminal_output` events to synchronize the collaborative IDE state across all connected clients in a room.
 - **Rate Limiting:** Sliding-window rate limiter backed by Redis. Strict limits on execution (`POST /api/simulate`) and AI endpoints.
 
 ### 3. Redis (Cache & Rate Limiting)

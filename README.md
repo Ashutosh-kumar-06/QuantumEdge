@@ -29,11 +29,12 @@ QuantumEdge is a comprehensive, interactive learning platform designed to take s
 | 🧠 **10 Comprehensive Modules** | Linear Algebra → VQE → Shor's Algorithm |
 | 💻 **Interactive Coding Lab** | VS Code-style Monaco editor with resizable panels |
 | ⚛️ **Dual Language Support** | Python (Qiskit) and C++ (QuEST) |
+| 🤝 **Multiplayer Collaboration** | WebRTC Video Chat, Live Multi-User Cursors, and Shared Excalidraw Whiteboards |
+| 🗂️ **Multi-File Explorer** | Create and manage multiple Python and C++ files in the Sandbox |
+| ⏪ **Time-Travel History** | Instantly restore your code and output from past executions |
+| 📚 **Quantum Snippets Library**| 1-click injection of complex Qiskit algorithms (Grover, Shor, VQE) |
 | 📈 **Live Circuit Visualizer** | Watch your gates trace through the circuit dynamically |
 | 🤖 **AI Code Reviewer** | Gemini-powered analysis of your quantum code |
-| 🔒 **Optional Authentication** | Email, Google, or GitHub — or stay anonymous |
-| 🛡️ **Rate Limiting** | Redis-backed sliding window per endpoint |
-| 📄 **Paginated APIs** | Offset-based pagination with metadata |
 | 🐳 **Sandboxed Execution** | Docker-out-of-Docker with network isolation |
 
 <br />
