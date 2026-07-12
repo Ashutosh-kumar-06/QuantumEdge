@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@excalidraw/excalidraw": "^0.18.1",
     "@monaco-editor/react": "^4.7.0",
     "@types/simple-peer": "^9.11.9",
     "driver.js": "^1.6.0",

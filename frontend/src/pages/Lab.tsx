@@ -13,6 +13,7 @@ import { io } from 'socket.io-client';
 import CircuitBuilder from '../components/CircuitBuilder';
 import AiTutorChat from '../components/AiTutorChat';
 import QuantumSnippets from '../components/QuantumSnippets';
+import FileExplorer from '../components/FileExplorer';
 import { auth } from '../firebase';
 
 import { driver } from 'driver.js';
@@ -203,6 +204,9 @@ export default function Lab() {
   const [output, setOutput] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [files, setFiles] = useState<{ [filename: string]: string }>({ 'main.py': '// Write your Qiskit code here!\n' });
+  const [activeFile, setActiveFile] = useState('main.py');
+  
   const [viewMode, setViewMode] = useState<'code' | 'builder'>('code');
   const [aiFeedback, setAiFeedback] = useState<string>('');
   const [language, setLanguage] = useState<'python' | 'cpp'>('python');
@@ -293,8 +297,10 @@ export default function Lab() {
           if (mod) {
             setModule(mod);
             setCode(mod.starterCode);
+            setFiles({ 'main.py': mod.starterCode || '' });
           } else {
             // Fallback to a sandbox if not found or if id is 'sandbox'
+            const sandboxCode = 'from qiskit import QuantumCircuit\n\n# Your sandbox circuit\nqc = QuantumCircuit(3)\nqc.measure_all()\n';
             setModule({
               id: 'sandbox',
               title: 'Quantum Sandbox',
@@ -302,9 +308,10 @@ export default function Lab() {
               prerequisites: [],
               estHours: 0,
               content: '# Quantum Sandbox\n\nWelcome to the sandbox! Here you can experiment with Qiskit or QuEST without being tied to a specific tutorial.\n\nUse the **Visual Builder** to drag and drop gates, or write the code yourself.',
-              starterCode: 'from qiskit import QuantumCircuit\n\n# Your sandbox circuit\nqc = QuantumCircuit(3)\nqc.measure_all()\n'
+              starterCode: sandboxCode
             });
-            setCode('from qiskit import QuantumCircuit\n\n# Your sandbox circuit\nqc = QuantumCircuit(3)\nqc.measure_all()\n');
+            setCode(sandboxCode);
+            setFiles({ 'main.py': sandboxCode });
           }
         }
       })
@@ -319,6 +326,7 @@ export default function Lab() {
         .then(data => {
           if (data && data.code) {
             setCode(data.code);
+            setFiles({ 'main.py': data.code });
             setLanguage(data.language as 'python' | 'cpp');
           }
         })
@@ -354,7 +362,7 @@ export default function Lab() {
         },
         body: JSON.stringify({ 
           title: module?.title || 'Sandbox Project', 
-          code, 
+          code: files[activeFile], 
           language, 
           author
         })
@@ -375,13 +383,20 @@ export default function Lab() {
     const newLang = e.target.value;
     setLanguage(newLang);
     if (newLang === 'cpp') {
-      setCode('// Include QuEST library\n#include <QuEST.h>\n#include <iostream>\n\nint main() {\n  std::cout << "Write your C++ Quantum circuit here!\\n";\n  return 0;\n}');
+      const cppCode = '// Include QuEST library\n#include <QuEST.h>\n#include <iostream>\n\nint main() {\n  std::cout << "Write your C++ Quantum circuit here!\\n";\n  return 0;\n}';
+      setCode(cppCode);
+      setFiles({ 'main.cpp': cppCode });
+      setActiveFile('main.cpp');
     } else {
-      setCode(module?.starterCode || '');
+      const pyCode = module?.starterCode || '';
+      setCode(pyCode);
+      setFiles({ 'main.py': pyCode });
+      setActiveFile('main.py');
     }
   }
 
   const runCode = async () => {
+    const code = files[activeFile];
     if (!code) return;
 
     if ((noiseModel === 'depolarizing' || noiseModel === 'thermal') && !isPro) {
@@ -450,6 +465,7 @@ export default function Lab() {
   };
 
   const requestAiReview = async () => {
+    const currentCode = files[activeFile];
     let token = '';
     if (auth.currentUser) {
       token = await auth.currentUser.getIdToken();
@@ -468,7 +484,7 @@ export default function Lab() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ code, actualErrorOrOutput: output })
+        body: JSON.stringify({ code: currentCode, actualErrorOrOutput: output })
       });
       const data = await response.json();
       setAiFeedback(data.feedback);
@@ -653,34 +669,60 @@ export default function Lab() {
                 storageKey="qe-main-split"
                 first={
                 /* Left side: Editor or Builder */
-                <div className="tour-code-editor" style={{ height: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--panel-bg)', position: 'relative' }}>
-                  {viewMode === 'code' ? (
-                    <Editor
-                      height="100%"
-                      defaultLanguage={language}
-                      language={language}
-                      theme="vs-dark"
-                      value={code}
-                      onChange={(val) => setCode(val || '')}
-                      options={{
-                        minimap: { enabled: false },
-                        fontSize: 14,
-                        wordWrap: 'on',
-                        scrollBeyondLastLine: false,
-                        padding: { top: 16 },
-                        automaticLayout: true
-                      }}
-                    />
-                  ) : (
-                    <div style={{ height: '100%', padding: '0', overflow: 'hidden' }}>
+                <div className="tour-code-editor" style={{ height: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--panel-bg)', position: 'relative', display: 'flex' }}>
+                  
+                  {viewMode === 'code' && (
+                    <div style={{ width: '200px' }}>
+                      <FileExplorer
+                        files={files}
+                        activeFile={activeFile}
+                        onFileSelect={(filename) => setActiveFile(filename)}
+                        onFileCreate={(filename) => {
+                          if (!files[filename]) {
+                            setFiles(prev => ({ ...prev, [filename]: '' }));
+                            setActiveFile(filename);
+                          }
+                        }}
+                        onFileDelete={(filename) => {
+                          const newFiles = { ...files };
+                          delete newFiles[filename];
+                          setFiles(newFiles);
+                          if (activeFile === filename) {
+                            setActiveFile(Object.keys(newFiles)[0]);
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  <div style={{ flex: 1 }}>
+                    {viewMode === 'code' ? (
+                      <Editor
+                        height="100%"
+                        defaultLanguage={language}
+                        language={language}
+                        theme="vs-dark"
+                        value={files[activeFile]}
+                        onChange={(val) => {
+                          setFiles(prev => ({ ...prev, [activeFile]: val || '' }));
+                        }}
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 14,
+                          wordWrap: 'on',
+                          scrollBeyondLastLine: false,
+                          padding: { top: 16 }
+                        }}
+                      />
+                    ) : (
                       <CircuitBuilder 
-                        onCodeGenerated={setCode} 
+                        onCodeGenerated={(code) => setFiles(prev => ({ ...prev, [activeFile]: code }))} 
                         socket={socket}
                         roomId={module.id}
                         username={localStorage.getItem('quantumEdgeUser') || `User_${Math.floor(Math.random()*1000)}`}
                       />
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               }
               second={
@@ -756,7 +798,7 @@ export default function Lab() {
                     {activeOutputTab === 'snippets' && (
                       <QuantumSnippets 
                         onSelect={(snippetCode) => {
-                          setCode(snippetCode);
+                          setFiles(prev => ({ ...prev, [activeFile]: snippetCode }));
                           setMode('code');
                           setActiveOutputTab('terminal');
                         }}
@@ -778,7 +820,7 @@ export default function Lab() {
                                   <button 
                                     onClick={() => {
                                       if (confirm('Restore this snapshot? Your current code will be overwritten.')) {
-                                        setCode(item.code);
+                                        setFiles(prev => ({ ...prev, [activeFile]: item.code }));
                                         setOutput(item.output);
                                       }
                                     }}

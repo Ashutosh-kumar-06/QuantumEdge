@@ -97,6 +97,11 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('cursor_move', { username, line, col });
   });
 
+  // Shared Whiteboard Sync
+  socket.on('whiteboard_update', ({ roomId, username, elements }) => {
+    socket.to(roomId).emit('whiteboard_update', { remoteUsername: username, elements });
+  });
+
   // Shared Terminal Sync
   socket.on('terminal_output', ({ roomId, output }) => {
     socket.to(roomId).emit('terminal_output', { output });

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import SharedEditor from '../components/SharedEditor';
+import SharedWhiteboard from '../components/SharedWhiteboard';
 import MultiplayerChat from '../components/MultiplayerChat';
 import HostControls from '../components/HostControls';
 
@@ -36,6 +37,7 @@ export default function ChatPage() {
   const [noiseModel, setNoiseModel] = useState<'ideal' | 'depolarizing' | 'thermal'>('ideal');
   const [output, setOutput] = useState<any>(null);
   const [running, setRunning] = useState(false);
+  const [viewMode, setViewMode] = useState<'code' | 'whiteboard'>('code');
 
   useEffect(() => {
     socket.on('terminal_output', ({ output: remoteOutput }) => {
@@ -121,24 +123,37 @@ export default function ChatPage() {
             {/* Execution Bar */}
             <div style={{ display: 'flex', gap: '1rem', padding: '0.5rem 1rem', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid var(--border-color)', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                <select value={language} onChange={e => setLanguage(e.target.value as any)} style={{ background: '#222', color: '#fff', border: '1px solid #444', padding: '0.4rem', borderRadius: '4px' }}>
-                  <option value="python">Qiskit (Python)</option>
-                  <option value="cpp">QuEST (C++)</option>
-                </select>
-                <select value={noiseModel} onChange={e => setNoiseModel(e.target.value as any)} style={{ background: '#222', color: '#fff', border: '1px solid #444', padding: '0.4rem', borderRadius: '4px' }}>
-                  <option value="ideal">Ideal (No Noise)</option>
-                  <option value="depolarizing">Depolarizing Noise</option>
-                  <option value="thermal">Thermal Relaxation</option>
-                </select>
-                <button onClick={runSimulation} disabled={running || !canEdit} style={{ background: 'var(--primary)', color: '#000', border: 'none', padding: '0.4rem 1.5rem', borderRadius: '4px', fontWeight: 'bold', cursor: (running || !canEdit) ? 'not-allowed' : 'pointer', opacity: (running || !canEdit) ? 0.7 : 1 }}>
-                  {running ? 'Running...' : 'Run Simulation'}
-                </button>
+                <div style={{ display: 'flex', background: '#222', borderRadius: '4px', overflow: 'hidden' }}>
+                  <button onClick={() => setViewMode('code')} style={{ background: viewMode === 'code' ? 'var(--primary)' : 'transparent', color: viewMode === 'code' ? '#000' : '#fff', border: 'none', padding: '0.4rem 1rem', cursor: 'pointer', fontWeight: 'bold' }}>Code</button>
+                  <button onClick={() => setViewMode('whiteboard')} style={{ background: viewMode === 'whiteboard' ? 'var(--primary)' : 'transparent', color: viewMode === 'whiteboard' ? '#000' : '#fff', border: 'none', padding: '0.4rem 1rem', cursor: 'pointer', fontWeight: 'bold' }}>Whiteboard</button>
+                </div>
+                
+                {viewMode === 'code' && (
+                  <>
+                    <select value={language} onChange={e => setLanguage(e.target.value as any)} style={{ background: '#222', color: '#fff', border: '1px solid #444', padding: '0.4rem', borderRadius: '4px' }}>
+                      <option value="python">Qiskit (Python)</option>
+                      <option value="cpp">QuEST (C++)</option>
+                    </select>
+                    <select value={noiseModel} onChange={e => setNoiseModel(e.target.value as any)} style={{ background: '#222', color: '#fff', border: '1px solid #444', padding: '0.4rem', borderRadius: '4px' }}>
+                      <option value="ideal">Ideal (No Noise)</option>
+                      <option value="depolarizing">Depolarizing Noise</option>
+                      <option value="thermal">Thermal Relaxation</option>
+                    </select>
+                    <button onClick={runSimulation} disabled={running || !canEdit} style={{ background: 'var(--primary)', color: '#000', border: 'none', padding: '0.4rem 1.5rem', borderRadius: '4px', fontWeight: 'bold', cursor: (running || !canEdit) ? 'not-allowed' : 'pointer', opacity: (running || !canEdit) ? 0.7 : 1 }}>
+                      {running ? 'Running...' : 'Run Simulation'}
+                    </button>
+                  </>
+                )}
               </div>
               <button onClick={() => setIsEditorMinimized(true)} style={{ background: 'transparent', color: '#888', border: 'none', cursor: 'pointer', fontSize: '1.2rem', padding: '0 0.5rem' }}>[-]</button>
             </div>
             
             <div style={{ flex: 1, position: 'relative' }}>
-              <SharedEditor socket={socket} roomId={socketRoomId!} readOnly={!canEdit} code={code} setCode={setCode} username={user.email} />
+              {viewMode === 'code' ? (
+                <SharedEditor socket={socket} roomId={socketRoomId!} readOnly={!canEdit} code={code} setCode={setCode} username={user.email} />
+              ) : (
+                <SharedWhiteboard socket={socket} roomId={socketRoomId!} readOnly={!canEdit} username={user.email} />
+              )}
             </div>
 
             {/* Terminal Pane */}
