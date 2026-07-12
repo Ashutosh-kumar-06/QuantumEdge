@@ -20,6 +20,8 @@ graph TD
     Redis[(Redis<br/>Rate Limiting)]:::db
     Mongo[(MongoDB<br/>Users, Courses, Jobs)]:::db
     RabbitMQ[[RabbitMQ<br/>Message Broker]]:::queue
+    Firebase((Firebase<br/>Auth API)):::client
+    Gemini((Gemini AI<br/>API)):::client
     
     subgraph Workers
         PyWorker[Python Worker<br/>Qiskit]:::worker
@@ -32,10 +34,13 @@ graph TD
     end
 
     %% Flow
+    Client -. "WebRTC (Peer-to-Peer)" .- Client
+    Client -- "OAuth2" --> Firebase
     Client -- "HTTPS / WSS\n(Rate Limited)" --> Nginx
     Nginx -- "Reverse Proxy" --> API
     API <--> Redis
     API <--> Mongo
+    API -- "REST" --> Gemini
     
     API -- "Publish Job\n(Async)" --> RabbitMQ
     RabbitMQ -- "Consume Job" --> PyWorker
@@ -58,26 +63,28 @@ graph TD
 
 ### 2. Frontend (React / Vite)
 - **Role:** Interactive UI with Monaco editor, markdown rendering, and circuit visualizations.
-- **Why React?** Component-based architecture suits complex interactive pages like the Lab.
+- **WebRTC:** Uses simple-peer to establish direct peer-to-peer UDP connections for low-latency video and audio streaming during meetings, bypassing the API Gateway.
+- **Auth:** Integrates with Firebase SDK for secure Google, GitHub, and Email authentication.
 
-### 2. API Gateway (Node.js / Express + Socket.io)
+### 3. API Gateway (Node.js / Express + Socket.io)
 - **Role:** Central entry point for all API requests and real-time collaboration. Handles HTTP routing, rate limiting, and queuing jobs.
 - **WebSockets:** Uses `socket.io` to manage real-time rooms for Group Chat and Group Video meetings. Broadcasts `cursor_move`, `code_update`, `whiteboard_update`, and `terminal_output` events to synchronize the collaborative IDE state across all connected clients in a room.
+- **AI Integration:** Securely communicates with the external Google Gemini API for the AI Code Review feature.
 - **Rate Limiting:** Sliding-window rate limiter backed by Redis. Strict limits on execution (`POST /api/simulate`) and AI endpoints.
 
-### 3. Redis (Cache & Rate Limiting)
+### 4. Redis (Cache & Rate Limiting)
 - **Role:** High-speed in-memory store.
 - **Usage:** Currently used for tracking rate limit counters per IP. Will be used for caching curriculum data in the future.
 
-### 4. MongoDB (Database)
+### 5. MongoDB (Database)
 - **Role:** Persistent storage for user profiles, curriculum content, and simulation job records.
 - **Why Mongo?** Document model is ideal for flexible curriculum data (Markdown content, code snippets) and unstructured job results.
 
-### 5. RabbitMQ (Message Broker)
+### 6. RabbitMQ (Message Broker)
 - **Role:** Asynchronous task queue decoupling the API Gateway from execution workers.
 - **Why not gRPC?** Code execution takes 5–15 seconds. gRPC (synchronous request/response) would block the API thread and keep HTTP connections open too long. The asynchronous fire-and-forget publish/subscribe pattern of RabbitMQ is perfect for this.
 
-### 6. Simulation Workers (Python & C++)
+### 7. Simulation Workers (Python & C++)
 - **Role:** Listen to RabbitMQ for jobs, execute them safely, and post results back to RabbitMQ.
 - **Security (Docker-in-Docker):** Workers spawn ephemeral, resource-constrained, network-disabled containers (`--network none`, `--memory 256m`) for each user job to prevent malicious code execution.
 
