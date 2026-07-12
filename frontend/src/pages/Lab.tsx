@@ -393,30 +393,43 @@ export default function Lab() {
     <div className="lab-layout">
       <div style={{ display: 'flex', height: 'calc(100vh - 60px)', width: '100%', overflow: 'hidden' }}>
         {/* Left Sidebar */}
-        <div style={{ width: '60px', background: 'var(--panel-bg)', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1rem 0', gap: '1.5rem', zIndex: 10 }}>
+        <div style={{ width: '85px', background: 'var(--panel-bg)', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1rem 0', gap: '1rem', zIndex: 10 }}>
           <button 
             title="Code Editor"
             onClick={() => setViewMode('code')} 
-            style={{ background: 'transparent', border: 'none', color: viewMode === 'code' ? 'var(--primary)' : '#888', cursor: 'pointer', fontSize: '1.5rem', transition: 'color 0.2s' }}>
-            💻
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', width: '70px', padding: '0.8rem 0', background: viewMode === 'code' ? 'rgba(100, 255, 218, 0.1)' : 'transparent', border: viewMode === 'code' ? '1px solid rgba(100,255,218,0.3)' : '1px solid transparent', borderRadius: '8px', color: viewMode === 'code' ? 'var(--primary)' : '#888', cursor: 'pointer', transition: 'all 0.2s' }}>
+            <span style={{ fontSize: '1.5rem' }}>💻</span>
+            <span style={{ fontSize: '0.65rem', fontWeight: viewMode === 'code' ? 'bold' : 'normal' }}>Code</span>
           </button>
           <button 
             title="Visual Builder"
             onClick={() => setViewMode('builder')} 
-            style={{ background: 'transparent', border: 'none', color: viewMode === 'builder' ? 'var(--primary)' : '#888', cursor: 'pointer', fontSize: '1.5rem', transition: 'color 0.2s' }}>
-            🧩
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', width: '70px', padding: '0.8rem 0', background: viewMode === 'builder' ? 'rgba(100, 255, 218, 0.1)' : 'transparent', border: viewMode === 'builder' ? '1px solid rgba(100,255,218,0.3)' : '1px solid transparent', borderRadius: '8px', color: viewMode === 'builder' ? 'var(--primary)' : '#888', cursor: 'pointer', transition: 'all 0.2s' }}>
+            <span style={{ fontSize: '1.5rem' }}>🧩</span>
+            <span style={{ fontSize: '0.65rem', fontWeight: viewMode === 'builder' ? 'bold' : 'normal' }}>Builder</span>
           </button>
+          
+          <div style={{ flex: 1 }}></div>
+
           <button 
             title="AI Code Review"
             onClick={requestAiReview} disabled={reviewLoading}
-            style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.5rem', transition: 'color 0.2s', marginTop: 'auto' }}>
-            ✨
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', width: '70px', padding: '0.8rem 0', background: 'transparent', border: '1px solid transparent', borderRadius: '8px', color: '#888', cursor: reviewLoading ? 'wait' : 'pointer', transition: 'all 0.2s' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#fff'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
+          >
+            <span style={{ fontSize: '1.5rem' }}>✨</span>
+            <span style={{ fontSize: '0.65rem' }}>AI Review</span>
           </button>
           <button 
             title="Save to Cloud"
             onClick={saveProject}
-            style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.5rem', transition: 'color 0.2s' }}>
-            ☁️
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', width: '70px', padding: '0.8rem 0', background: 'transparent', border: '1px solid transparent', borderRadius: '8px', color: '#888', cursor: 'pointer', transition: 'all 0.2s' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#fff'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
+          >
+            <span style={{ fontSize: '1.5rem' }}>☁️</span>
+            <span style={{ fontSize: '0.65rem' }}>Save</span>
           </button>
         </div>
 
