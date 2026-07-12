@@ -15,7 +15,8 @@ graph TD
 
     %% Components
     Client[React Frontend<br/>Vite / TS]:::client
-    API[API Gateway<br/>Express.js]:::api
+    Nginx((Nginx<br/>Reverse Proxy<br/>HTTPS / WSS)):::client
+    API[API Gateway<br/>Express.js + Socket.io]:::api
     Redis[(Redis<br/>Rate Limiting)]:::db
     Mongo[(MongoDB<br/>Users, Courses, Jobs)]:::db
     RabbitMQ[[RabbitMQ<br/>Message Broker]]:::queue
@@ -31,7 +32,8 @@ graph TD
     end
 
     %% Flow
-    Client -- "HTTP REST\n(Rate Limited)" --> API
+    Client -- "HTTPS / WSS\n(Rate Limited)" --> Nginx
+    Nginx -- "Reverse Proxy" --> API
     API <--> Redis
     API <--> Mongo
     
@@ -50,7 +52,11 @@ graph TD
 
 ## Component Details
 
-### 1. Frontend (React / Vite)
+### 1. Nginx (Reverse Proxy & Load Balancer)
+- **Role:** Handles incoming HTTPS and WSS (Secure WebSockets) traffic from the internet, terminating SSL/TLS via Let's Encrypt, and proxying requests to the internal API Gateway.
+- **Security:** Protects against direct exposure of internal services, blocks malformed requests, and provides a layer of DDOS protection.
+
+### 2. Frontend (React / Vite)
 - **Role:** Interactive UI with Monaco editor, markdown rendering, and circuit visualizations.
 - **Why React?** Component-based architecture suits complex interactive pages like the Lab.
 

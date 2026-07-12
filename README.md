@@ -32,6 +32,7 @@ Built with a **highly scalable, distributed microservices architecture**, it fea
 
 I built QuantumEdge to solve complex distributed systems problems while delivering a seamless user experience. Here are the core technical achievements:
 
+- 🔒 **Production-Grade Security (HTTPS & WSS):** Deployed behind an **Nginx Reverse Proxy** configured with strict Let's Encrypt SSL/TLS certificates, ensuring all REST API calls and WebSocket connections are fully encrypted and secure against packet sniffing.
 - 🛡️ **Secure Code Execution (Docker-in-Docker):** To safely execute arbitrary, untrusted user code (Python & C++), the worker nodes dynamically spawn ephemeral, resource-constrained, network-disabled Docker containers for every single job execution.
 - ⚡ **Asynchronous Message Queueing:** Instead of blocking API threads with synchronous HTTP/gRPC calls for heavy simulations (5-15s execution time), the system uses **RabbitMQ** to decouple the Express Gateway from the Worker nodes, allowing high concurrency and fault tolerance.
 - 🤝 **Real-Time WebRTC & WebSockets:** Implemented custom peer-to-peer WebRTC video conferencing layered with Socket.io for **Google Docs-style live cursors**, shared multi-file IDEs, and synchronized Excalidraw whiteboards.
@@ -72,6 +73,7 @@ graph TD
 
     %% Components
     Client[React Frontend<br/>Vite / TS]:::client
+    Nginx((Nginx<br/>Reverse Proxy<br/>HTTPS / WSS)):::client
     API[API Gateway<br/>Express.js + Socket.io]:::api
     Redis[(Redis<br/>Rate Limiting)]:::db
     Mongo[(MongoDB<br/>Users, Courses)]:::db
@@ -88,7 +90,8 @@ graph TD
     end
 
     %% Flow
-    Client -- "REST / WebSockets" --> API
+    Client -- "HTTPS / WSS" --> Nginx
+    Nginx -- "Reverse Proxy" --> API
     Client -. "WebRTC (Peer-to-Peer)" .- Client
     API <--> Redis
     API <--> Mongo
