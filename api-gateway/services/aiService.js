@@ -83,7 +83,7 @@ Keep your responses helpful, beginner-friendly, under 150 words, and DO NOT give
       history: formattedHistory
     });
 
-    const response = await chat.sendMessage(newPrompt);
+    const response = await chat.sendMessage({ message: newPrompt });
     return response.text;
   } catch (error) {
     console.error('Gemini Chat Error:', error);
