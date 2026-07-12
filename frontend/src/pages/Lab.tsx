@@ -13,7 +13,7 @@ import { io } from 'socket.io-client';
 import CircuitBuilder from '../components/CircuitBuilder';
 import MultiplayerChat from '../components/MultiplayerChat';
 import MultiplayerVideoCall from '../components/MultiplayerVideoCall';
-import ProbabilityHistogram from '../components/ProbabilityHistogram';
+
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 
@@ -214,6 +214,20 @@ export default function Lab() {
 
   // Multiplayer Room State
   const [roomId, setRoomId] = useState<string>('');
+  const [roomInput, setRoomInput] = useState<string>('');
+  
+  const currentUser = localStorage.getItem('quantumEdgeUser');
+
+  const createRoom = () => {
+    const newRoomId = Math.random().toString(36).substring(2, 8);
+    setRoomId(newRoomId);
+  };
+
+  const joinRoom = () => {
+    if (roomInput.trim()) {
+      setRoomId(roomInput.trim());
+    }
+  };
 
   // Tour Guide using Driver.js
   useEffect(() => {
@@ -391,55 +405,51 @@ export default function Lab() {
 
   return (
     <div className="lab-layout">
-      <div style={{ display: 'flex', height: 'calc(100vh - 60px)', width: '100%', overflow: 'hidden' }}>
-        {/* Left Sidebar */}
-        <div style={{ width: '85px', background: 'var(--panel-bg)', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1rem 0', gap: '1rem', zIndex: 10 }}>
-          <button 
-            title="Code Editor"
-            onClick={() => setViewMode('code')} 
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', width: '70px', padding: '0.8rem 0', background: viewMode === 'code' ? 'rgba(100, 255, 218, 0.1)' : 'transparent', border: viewMode === 'code' ? '1px solid rgba(100,255,218,0.3)' : '1px solid transparent', borderRadius: '8px', color: viewMode === 'code' ? 'var(--primary)' : '#888', cursor: 'pointer', transition: 'all 0.2s' }}>
-            <span style={{ fontSize: '1.5rem' }}>💻</span>
-            <span style={{ fontSize: '0.65rem', fontWeight: viewMode === 'code' ? 'bold' : 'normal' }}>Code</span>
-          </button>
-          <button 
-            title="Visual Builder"
-            onClick={() => setViewMode('builder')} 
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', width: '70px', padding: '0.8rem 0', background: viewMode === 'builder' ? 'rgba(100, 255, 218, 0.1)' : 'transparent', border: viewMode === 'builder' ? '1px solid rgba(100,255,218,0.3)' : '1px solid transparent', borderRadius: '8px', color: viewMode === 'builder' ? 'var(--primary)' : '#888', cursor: 'pointer', transition: 'all 0.2s' }}>
-            <span style={{ fontSize: '1.5rem' }}>🧩</span>
-            <span style={{ fontSize: '0.65rem', fontWeight: viewMode === 'builder' ? 'bold' : 'normal' }}>Builder</span>
-          </button>
-          
-          <div style={{ flex: 1 }}></div>
-
-          <button 
-            title="AI Code Review"
-            onClick={requestAiReview} disabled={reviewLoading}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', width: '70px', padding: '0.8rem 0', background: 'transparent', border: '1px solid transparent', borderRadius: '8px', color: '#888', cursor: reviewLoading ? 'wait' : 'pointer', transition: 'all 0.2s' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#fff'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
-          >
-            <span style={{ fontSize: '1.5rem' }}>✨</span>
-            <span style={{ fontSize: '0.65rem' }}>AI Review</span>
-          </button>
-          <button 
-            title="Save to Cloud"
-            onClick={saveProject}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', width: '70px', padding: '0.8rem 0', background: 'transparent', border: '1px solid transparent', borderRadius: '8px', color: '#888', cursor: 'pointer', transition: 'all 0.2s' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#fff'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
-          >
-            <span style={{ fontSize: '1.5rem' }}>☁️</span>
-            <span style={{ fontSize: '0.65rem' }}>Save</span>
-          </button>
-        </div>
-
+      <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 60px)', width: '100%', overflow: 'hidden' }}>
         {/* Main Workspace */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {/* Top Header */}
           <div className="lab-header" style={{ padding: '0.5rem 1rem', background: 'rgba(0,0,0,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <h2 style={{ margin: 0, fontSize: '1.1rem' }}>{module.title}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '1rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '1rem' }}>
+                <button 
+                  title="Code Editor"
+                  onClick={() => setViewMode('code')} 
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0.4rem 0.8rem', background: viewMode === 'code' ? 'rgba(100, 255, 218, 0.1)' : 'transparent', border: viewMode === 'code' ? '1px solid rgba(100,255,218,0.3)' : '1px solid transparent', borderRadius: '4px', color: viewMode === 'code' ? 'var(--primary)' : '#888', cursor: 'pointer', transition: 'all 0.2s' }}>
+                  <span style={{ fontSize: '1rem' }}>💻</span>
+                  <span style={{ fontSize: '0.8rem', fontWeight: viewMode === 'code' ? 'bold' : 'normal' }}>Code</span>
+                </button>
+                <button 
+                  title="Visual Builder"
+                  onClick={() => setViewMode('builder')} 
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0.4rem 0.8rem', background: viewMode === 'builder' ? 'rgba(100, 255, 218, 0.1)' : 'transparent', border: viewMode === 'builder' ? '1px solid rgba(100,255,218,0.3)' : '1px solid transparent', borderRadius: '4px', color: viewMode === 'builder' ? 'var(--primary)' : '#888', cursor: 'pointer', transition: 'all 0.2s' }}>
+                  <span style={{ fontSize: '1rem' }}>🧩</span>
+                  <span style={{ fontSize: '0.8rem', fontWeight: viewMode === 'builder' ? 'bold' : 'normal' }}>Builder</span>
+                </button>
+                <button 
+                  title="AI Code Review"
+                  onClick={requestAiReview} disabled={reviewLoading}
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0.4rem 0.8rem', background: 'transparent', border: '1px solid transparent', borderRadius: '4px', color: '#888', cursor: reviewLoading ? 'wait' : 'pointer', transition: 'all 0.2s' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#fff'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
+                >
+                  <span style={{ fontSize: '1rem' }}>✨</span>
+                  <span style={{ fontSize: '0.8rem' }}>AI Review</span>
+                </button>
+                <button 
+                  title="Save to Cloud"
+                  onClick={saveProject}
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0.4rem 0.8rem', background: 'transparent', border: '1px solid transparent', borderRadius: '4px', color: '#888', cursor: 'pointer', transition: 'all 0.2s' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#fff'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
+                >
+                  <span style={{ fontSize: '1rem' }}>☁️</span>
+                  <span style={{ fontSize: '0.8rem' }}>Save</span>
+                </button>
+              </div>
             </div>
+
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <select value={language} onChange={handleLanguageChange} style={{ background: '#222', color: '#fff', border: '1px solid #444', padding: '0.4rem', borderRadius: '4px', fontSize: '0.9rem' }}>
@@ -506,7 +516,7 @@ export default function Lab() {
                 <div style={{ height: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--panel-bg)', display: 'flex', flexDirection: 'column' }}>
                   {/* Output Tabs */}
                   <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid var(--border-color)' }}>
-                    {['visualizer', 'analytics', 'chat', 'video', 'terminal'].map(tab => (
+                    {['visualizer', 'chat', 'video', 'terminal'].map(tab => (
                       <button 
                         key={tab}
                         onClick={() => setActiveOutputTab(tab as any)}
@@ -542,40 +552,63 @@ export default function Lab() {
                       </div>
                     )}
 
-                    {/* Analytics Tab */}
-                    {activeOutputTab === 'analytics' && (
-                      <div style={{ height: '100%' }}>
-                        {output && output.counts ? (
-                          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                            <ProbabilityHistogram counts={output.counts} />
-                          </div>
-                        ) : (
-                          <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: '#666' }}>Run simulation to see measurement analytics</div>
-                        )}
-                      </div>
-                    )}
+
 
                     {/* Chat Tab */}
                     {activeOutputTab === 'chat' && (
-                      <div style={{ height: '100%' }}>
-                        <MultiplayerChat 
-                          socket={socket} 
-                          username={localStorage.getItem('quantumEdgeUser') || `User_${Math.floor(Math.random()*1000)}`}
-                          defaultRoom={module.id} 
-                          roomId={roomId || module.id}
-                          setRoomId={setRoomId}
-                        />
+                      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        {!currentUser ? (
+                          <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', color: '#888' }}>
+                            Please sign in to use Multiplayer Chat.
+                          </div>
+                        ) : (
+                          <>
+                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                              <button onClick={createRoom} style={{ background: 'var(--primary)', color: '#000', border: 'none', padding: '0.4rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Create Meeting</button>
+                              <div style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
+                                <input type="text" placeholder="Room ID" value={roomInput} onChange={e => setRoomInput(e.target.value)} style={{ flex: 1, background: '#222', color: '#fff', border: '1px solid #444', padding: '0.4rem', borderRadius: '4px' }} />
+                                <button onClick={joinRoom} style={{ background: '#333', color: '#fff', border: '1px solid #555', padding: '0.4rem 1rem', borderRadius: '4px', cursor: 'pointer' }}>Join</button>
+                              </div>
+                            </div>
+                            <div style={{ flex: 1, overflow: 'hidden' }}>
+                              <MultiplayerChat 
+                                socket={socket} 
+                                username={JSON.parse(currentUser).email}
+                                defaultRoom={module.id} 
+                                roomId={roomId || module.id}
+                                setRoomId={setRoomId}
+                              />
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
 
                     {/* Video Tab */}
                     {activeOutputTab === 'video' && (
-                      <div style={{ height: '100%' }}>
-                        <MultiplayerVideoCall 
-                          socket={socket} 
-                          roomId={roomId || module.id}
-                          username={localStorage.getItem('quantumEdgeUser') || `User_${Math.floor(Math.random()*1000)}`}
-                        />
+                      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        {!currentUser ? (
+                          <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', color: '#888' }}>
+                            Please sign in to use Multiplayer Video Call.
+                          </div>
+                        ) : (
+                          <>
+                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                              <button onClick={createRoom} style={{ background: 'var(--primary)', color: '#000', border: 'none', padding: '0.4rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Create Meeting</button>
+                              <div style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
+                                <input type="text" placeholder="Room ID" value={roomInput} onChange={e => setRoomInput(e.target.value)} style={{ flex: 1, background: '#222', color: '#fff', border: '1px solid #444', padding: '0.4rem', borderRadius: '4px' }} />
+                                <button onClick={joinRoom} style={{ background: '#333', color: '#fff', border: '1px solid #555', padding: '0.4rem 1rem', borderRadius: '4px', cursor: 'pointer' }}>Join</button>
+                              </div>
+                            </div>
+                            <div style={{ flex: 1, overflow: 'hidden' }}>
+                              <MultiplayerVideoCall 
+                                socket={socket} 
+                                roomId={roomId || module.id}
+                                username={JSON.parse(currentUser).email}
+                              />
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
 

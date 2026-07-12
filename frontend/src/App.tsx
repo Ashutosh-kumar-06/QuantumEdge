@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import Tutorial from './pages/Tutorial';
 import Lab from './pages/Lab';
 import Auth from './pages/Auth';
+import LeaderboardPage from './pages/LeaderboardPage';
 
 import { ProgressProvider } from './context/ProgressContext';
 
@@ -62,6 +63,9 @@ function App() {
               <li className={location.pathname === '/modules' ? 'active' : ''}>
                 <Link to="/modules">Modules</Link>
               </li>
+              <li className={location.pathname === '/leaderboard' ? 'active' : ''}>
+                <Link to="/leaderboard">Leaderboard</Link>
+              </li>
               {user ? (
                 <li>
                   <a href="#" onClick={handleSignOut} style={{ color: 'var(--text-muted)' }}>Sign Out</a>
@@ -79,6 +83,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/lab/sandbox" replace />} />
             <Route path="/modules" element={<Dashboard />} />
+            <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/tutorial/:id" element={<Tutorial />} />
             <Route path="/lab/:id" element={<Lab />} />
