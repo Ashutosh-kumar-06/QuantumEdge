@@ -36,7 +36,7 @@ I built QuantumEdge to solve complex distributed systems problems while deliveri
 - 🔒 **Production-Grade Security (HTTPS & WSS):** Deployed behind an **Nginx Reverse Proxy** configured with strict Let's Encrypt SSL/TLS certificates, ensuring all REST API calls and WebSocket connections are fully encrypted and secure against packet sniffing.
 - 🛡️ **Secure Code Execution (Docker-in-Docker):** To safely execute arbitrary, untrusted user code (Python & C++), the worker nodes dynamically spawn ephemeral, resource-constrained, network-disabled Docker containers for every single job execution.
 - ⚡ **Asynchronous Message Queueing:** Instead of blocking API threads with synchronous HTTP/gRPC calls for heavy simulations (5-15s execution time), the system uses **RabbitMQ** to decouple the Express Gateway from the Worker nodes, allowing high concurrency and fault tolerance.
-- 🤝 **Real-Time WebRTC & WebSockets:** Implemented custom peer-to-peer WebRTC video conferencing layered with Socket.io for **Google Docs-style live cursors**, shared multi-file IDEs, and synchronized Excalidraw whiteboards.
+- 🤝 **Real-Time WebRTC & WebSockets:** Implemented a **Full Mesh Topology** WebRTC video conferencing system, seamlessly layered with Socket.io for **Google Docs-style live cursors**, shared multi-file IDEs, and synchronized Excalidraw whiteboards.
 - 🧱 **Advanced React Patterns:** Leveraged complex React state management for a VS Code-style Monaco editor environment, including resizable panes, time-travel execution history, and a multi-file project explorer.
 - 🚦 **Redis Rate Limiting:** Implemented a robust sliding-window rate limiter per IP address to protect API endpoints and prevent abuse of the Gemini AI Code Review endpoints and Docker execution environments.
 
@@ -93,7 +93,7 @@ graph TD
     end
 
     %% Flow
-    Client -. "WebRTC (Peer-to-Peer)" .- Client
+    Client -. "WebRTC (Full Mesh Topology)" .- Client
     Client -- "OAuth2" --> Firebase
     Client -- "HTTPS / WSS" --> Nginx
     Nginx -- "Reverse Proxy" --> API

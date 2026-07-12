@@ -34,7 +34,7 @@ graph TD
     end
 
     %% Flow
-    Client -. "WebRTC (Peer-to-Peer)" .- Client
+    Client -. "WebRTC (Full Mesh Topology)" .- Client
     Client -- "OAuth2" --> Firebase
     Client -- "HTTPS / WSS\n(Rate Limited)" --> Nginx
     Nginx -- "Reverse Proxy" --> API
@@ -63,7 +63,7 @@ graph TD
 
 ### 2. Frontend (React / Vite)
 - **Role:** Interactive UI with Monaco editor, markdown rendering, and circuit visualizations.
-- **WebRTC:** Uses simple-peer to establish direct peer-to-peer UDP connections for low-latency video and audio streaming during meetings, bypassing the API Gateway.
+- **WebRTC:** Uses simple-peer to establish a Full Mesh topology (direct peer-to-peer UDP connections between every participant) for low-latency video and audio streaming during multiplayer meetings, bypassing the API Gateway entirely.
 - **Auth:** Integrates with Firebase SDK for secure Google, GitHub, and Email authentication.
 
 ### 3. API Gateway (Node.js / Express + Socket.io)
