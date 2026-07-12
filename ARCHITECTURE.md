@@ -23,11 +23,12 @@ graph TD
         ClientB -. "WebRTC Video/Audio" .- ClientC
         ClientC -. "WebRTC Video/Audio" .- ClientA
     end
-    Nginx((Nginx<br/>Reverse Proxy<br/>HTTPS / WSS)):::client
-    API[API Gateway<br/>Express.js + Socket.io]:::api
-    Redis[(Redis<br/>Rate Limiting)]:::db
-    Mongo[(MongoDB<br/>Users, Courses, Jobs)]:::db
+    Nginx((Nginx<br/>Load Balancer<br/>HTTPS / WSS)):::client
+    API[API Gateway<br/>3x Replicas<br/>Express.js + Socket.io]:::api
+    Redis[(Redis<br/>Rate Limiting &<br/>Socket.io Adapter)]:::db
+    Mongo[(MongoDB<br/>Users, Projects, Jobs)]:::db
     RabbitMQ[[RabbitMQ<br/>Message Broker]]:::queue
+    TURN((Coturn<br/>TURN Server)):::client
     Firebase((Firebase<br/>Auth API)):::client
     Gemini((Gemini AI<br/>API)):::client
     
@@ -44,10 +45,11 @@ graph TD
     %% Flow
     ClientA -- "OAuth2" --> Firebase
     ClientBrowsers -- "HTTPS / WSS\n(Rate Limited)" --> Nginx
-    Nginx -- "Reverse Proxy" --> API
+    ClientBrowsers -. "STUN/TURN Relay" .-> TURN
+    Nginx -- "Reverse Proxy\nRound Robin" --> API
     API <--> Redis
     API <--> Mongo
-    API -- "REST" --> Gemini
+    API -- "REST / WebSocket Stream" --> Gemini
     
     API -- "Publish Job\n(Async)" --> RabbitMQ
     RabbitMQ -- "Consume Job" --> PyWorker
@@ -65,23 +67,25 @@ graph TD
 ## Component Details
 
 ### 1. Nginx (Reverse Proxy & Load Balancer)
-- **Role:** Handles incoming HTTPS and WSS (Secure WebSockets) traffic from the internet, terminating SSL/TLS via Let's Encrypt, and proxying requests to the internal API Gateway.
+- **Role:** Handles incoming HTTPS and WSS (Secure WebSockets) traffic. Terminates SSL/TLS via Let's Encrypt and acts as a **Round-Robin Load Balancer**, distributing traffic evenly across 3 API Gateway replicas using Docker's internal DNS resolver.
 - **Security:** Protects against direct exposure of internal services, blocks malformed requests, and provides a layer of DDOS protection.
 
 ### 2. Frontend (React / Vite)
-- **Role:** Interactive UI with Monaco editor, markdown rendering, and circuit visualizations.
-- **WebRTC:** Uses simple-peer to establish a Full Mesh topology (direct peer-to-peer UDP connections between every participant) for low-latency video and audio streaming during multiplayer meetings, bypassing the API Gateway entirely.
-- **Auth:** Integrates with Firebase SDK for secure Google, GitHub, and Email authentication.
+- **Role:** Interactive UI with Monaco editor (multi-file project support), markdown rendering, and circuit visualizations.
+- **WebRTC:** Uses simple-peer to establish a Full Mesh topology (direct peer-to-peer UDP connections) for low-latency video and audio streaming during multiplayer meetings. 
+- **TURN Server:** In cases where users are behind strict corporate firewalls or symmetric NATs, traffic seamlessly falls back to our self-hosted **Coturn** relay server (port 3478).
+- **Auth:** Integrates with Firebase SDK for secure authentication.
 
 ### 3. API Gateway (Node.js / Express + Socket.io)
-- **Role:** Central entry point for all API requests and real-time collaboration. Handles HTTP routing, rate limiting, and queuing jobs.
-- **WebSockets:** Uses `socket.io` to manage real-time rooms for Group Chat and Group Video meetings. Broadcasts `cursor_move`, `code_update`, `whiteboard_update`, and `terminal_output` events to synchronize the collaborative IDE state across all connected clients in a room.
-- **AI Integration:** Securely communicates with the external Google Gemini API for the AI Code Review feature.
-- **Rate Limiting:** Sliding-window rate limiter backed by Redis. Strict limits on execution (`POST /api/simulate`) and AI endpoints.
+- **Role:** Scaled to **3 replicas**, it acts as the central entry point for all API requests. Handles routing, rate limiting, and queueing jobs.
+- **Pre-Flight Validation:** Executes lightning-fast Python `ast.parse` syntax checks before queuing, rejecting malformed code in `<50ms` and saving massive compute resources.
+- **WebSockets:** Uses `socket.io` to manage real-time rooms for Group Chat, Whiteboards, and the **Streaming AI Pair Programmer** (typing directly into the user's Monaco Editor via Gemini).
+- **Redis Adapter:** Uses `@socket.io/redis-adapter` to perfectly synchronize WebSocket events across all 3 backend replicas.
+- **Rate Limiting:** Sliding-window rate limiter backed by Redis.
 
-### 4. Redis (Cache & Rate Limiting)
+### 4. Redis (Cache, Rate Limiting, & Pub/Sub)
 - **Role:** High-speed in-memory store.
-- **Usage:** Currently used for tracking rate limit counters per IP. Will be used for caching curriculum data in the future.
+- **Usage:** Used for tracking rate limit counters per IP, and serving as the Pub/Sub messaging backplane for the Socket.io Redis Adapter to scale WebSocket rooms horizontally.
 
 ### 5. MongoDB (Database)
 - **Role:** Persistent storage for user profiles, curriculum content, and simulation job records.

@@ -83,11 +83,12 @@ graph TD
         ClientC -. "WebRTC Video/Audio" .- ClientA
     end
     
-    Nginx((Nginx<br/>Reverse Proxy<br/>HTTPS / WSS)):::client
-    API[API Gateway<br/>Express.js + Socket.io]:::api
-    Redis[(Redis<br/>Rate Limiting)]:::db
-    Mongo[(MongoDB<br/>Users, Courses)]:::db
+    Nginx((Nginx<br/>Load Balancer<br/>HTTPS / WSS)):::client
+    API[API Gateway<br/>3x Replicas<br/>Express.js + Socket.io]:::api
+    Redis[(Redis<br/>Rate Limiting &<br/>Socket.io Adapter)]:::db
+    Mongo[(MongoDB<br/>Users, Projects)]:::db
     RabbitMQ[[RabbitMQ<br/>Message Broker]]:::queue
+    TURN((Coturn<br/>TURN Server)):::client
     Firebase((Firebase<br/>Auth API)):::client
     Gemini((Gemini AI<br/>API)):::client
     
@@ -97,17 +98,18 @@ graph TD
     end
 
     subgraph Ephemeral Sandboxes
-        PySandbox["Python Sandbox<br/>Docker (Network None)"]:::worker
-        CppSandbox["C++ Sandbox<br/>Docker (Network None)"]:::worker
+        PySandbox[Python Sandbox<br/>Docker]:::worker
+        CppSandbox[C++ Sandbox<br/>Docker]:::worker
     end
 
     %% Flow
     ClientA -- "OAuth2" --> Firebase
     ClientBrowsers -- "HTTPS / WSS (REST & Socket.io)" --> Nginx
-    Nginx -- "Reverse Proxy" --> API
+    ClientBrowsers -. "STUN/TURN Relay" .-> TURN
+    Nginx -- "Reverse Proxy\nRound Robin" --> API
     API <--> Redis
     API <--> Mongo
-    API -- "REST" --> Gemini
+    API -- "REST / WebSocket Stream" --> Gemini
     
     API -- "Publish Job (Async)" --> RabbitMQ
     RabbitMQ -- "Consume Job" --> PyWorker
