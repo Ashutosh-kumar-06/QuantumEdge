@@ -69,17 +69,25 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('circuit_update', { username, moments });
   });
 
-  // WebRTC Signaling
-  socket.on('video_offer', ({ roomId, offer, senderId }) => {
-    socket.to(roomId).emit('video_offer', { offer, senderId, socketId: socket.id });
+  // WebRTC Mesh Signaling
+  socket.on('join_video_room', ({ roomId, username }) => {
+    socket.to(roomId).emit('user_joined_video', { username, socketId: socket.id });
   });
 
-  socket.on('video_answer', ({ roomId, answer, senderId }) => {
-    socket.to(roomId).emit('video_answer', { answer, senderId, socketId: socket.id });
+  socket.on('leave_video_room', ({ roomId, username }) => {
+    socket.to(roomId).emit('user_left_video', { username, socketId: socket.id });
   });
 
-  socket.on('new_ice_candidate', ({ roomId, candidate, senderId }) => {
-    socket.to(roomId).emit('new_ice_candidate', { candidate, senderId, socketId: socket.id });
+  socket.on('video_offer', ({ roomId, offer, senderId, targetId }) => {
+    io.to(targetId).emit('video_offer', { offer, senderId, socketId: socket.id });
+  });
+
+  socket.on('video_answer', ({ roomId, answer, senderId, targetId }) => {
+    io.to(targetId).emit('video_answer', { answer, senderId, socketId: socket.id });
+  });
+
+  socket.on('new_ice_candidate', ({ roomId, candidate, senderId, targetId }) => {
+    io.to(targetId).emit('new_ice_candidate', { candidate, senderId, socketId: socket.id });
   });
 
   socket.on('disconnect', () => {

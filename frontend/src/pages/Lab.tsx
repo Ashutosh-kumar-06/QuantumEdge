@@ -12,6 +12,7 @@ import { useProgress } from '../context/ProgressContext';
 import { io } from 'socket.io-client';
 import CircuitBuilder from '../components/CircuitBuilder';
 import MultiplayerChat from '../components/MultiplayerChat';
+import MultiplayerVideoCall from '../components/MultiplayerVideoCall';
 import ProbabilityHistogram from '../components/ProbabilityHistogram';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
@@ -205,7 +206,7 @@ export default function Lab() {
   const [aiFeedback, setAiFeedback] = useState<string>('');
   const [language, setLanguage] = useState<'python' | 'cpp'>('python');
   const [noiseModel, setNoiseModel] = useState<'ideal' | 'depolarizing' | 'thermal'>('ideal');
-  const [activeOutputTab, setActiveOutputTab] = useState<'visualizer' | 'analytics' | 'multiplayer' | 'terminal'>('visualizer');
+  const [activeOutputTab, setActiveOutputTab] = useState<'visualizer' | 'analytics' | 'chat' | 'video' | 'terminal'>('visualizer');
   
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -424,7 +425,6 @@ export default function Lab() {
           {/* Top Header */}
           <div className="lab-header" style={{ padding: '0.5rem 1rem', background: 'rgba(0,0,0,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <button onClick={() => navigate(`/tutorial/${module.id}`)} style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer' }}>← Back</button>
               <h2 style={{ margin: 0, fontSize: '1.1rem' }}>{module.title}</h2>
             </div>
             
@@ -493,7 +493,7 @@ export default function Lab() {
                 <div style={{ height: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--panel-bg)', display: 'flex', flexDirection: 'column' }}>
                   {/* Output Tabs */}
                   <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid var(--border-color)' }}>
-                    {['visualizer', 'analytics', 'multiplayer', 'terminal'].map(tab => (
+                    {['visualizer', 'analytics', 'chat', 'video', 'terminal'].map(tab => (
                       <button 
                         key={tab}
                         onClick={() => setActiveOutputTab(tab as any)}
@@ -542,8 +542,8 @@ export default function Lab() {
                       </div>
                     )}
 
-                    {/* Multiplayer Tab */}
-                    {activeOutputTab === 'multiplayer' && (
+                    {/* Chat Tab */}
+                    {activeOutputTab === 'chat' && (
                       <div style={{ height: '100%' }}>
                         <MultiplayerChat 
                           socket={socket} 
@@ -551,6 +551,17 @@ export default function Lab() {
                           defaultRoom={module.id} 
                           roomId={roomId || module.id}
                           setRoomId={setRoomId}
+                        />
+                      </div>
+                    )}
+
+                    {/* Video Tab */}
+                    {activeOutputTab === 'video' && (
+                      <div style={{ height: '100%' }}>
+                        <MultiplayerVideoCall 
+                          socket={socket} 
+                          roomId={roomId || module.id}
+                          username={localStorage.getItem('quantumEdgeUser') || `User_${Math.floor(Math.random()*1000)}`}
                         />
                       </div>
                     )}
@@ -567,7 +578,15 @@ export default function Lab() {
                         {output ? (
                           <>
                             {output.output && output.output.trim() !== '' && (
-                              <div style={{ color: '#ccc' }}>{output.output}</div>
+                              <div style={{ color: '#ccc', marginBottom: '1rem' }}>{output.output}</div>
+                            )}
+                            {output.counts && (
+                              <div style={{ color: '#00ff88', marginBottom: '1rem' }}>
+                                <strong>Raw Measurement Counts:</strong>
+                                <pre style={{ background: 'rgba(0,0,0,0.3)', padding: '0.5rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                  {JSON.stringify(output.counts, null, 2)}
+                                </pre>
+                              </div>
                             )}
                             {output.error && (
                               <div style={{ color: '#ff5555' }}><strong>Error:</strong> {output.error}</div>
