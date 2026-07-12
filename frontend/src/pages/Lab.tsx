@@ -325,12 +325,22 @@ export default function Lab() {
 
   const saveProject = async () => {
     try {
+      let author = 'Anonymous';
       const userStr = localStorage.getItem('quantumEdgeUser');
-      const author = userStr ? JSON.parse(userStr).email : 'Anonymous';
+      if (userStr) {
+         try {
+            const obj = JSON.parse(userStr);
+            author = obj.email || obj.uid || userStr;
+         } catch(e) { author = userStr; }
+      }
       
       let token = '';
       if (auth.currentUser) {
         token = await auth.currentUser.getIdToken();
+      } else {
+        alert('Please sign in to save projects to the cloud!');
+        navigate('/auth');
+        return;
       }
 
       const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/projects`, {
@@ -426,14 +436,18 @@ export default function Lab() {
   };
 
   const requestAiReview = async () => {
+    let token = '';
+    if (auth.currentUser) {
+      token = await auth.currentUser.getIdToken();
+    } else {
+      alert('Please sign in to request AI Code Reviews!');
+      navigate('/auth');
+      return;
+    }
+
     setReviewLoading(true);
     setIsAiChatOpen(true);
     try {
-      let token = '';
-      if (auth.currentUser) {
-        token = await auth.currentUser.getIdToken();
-      }
-
       const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/review`, {
         method: 'POST',
         headers: { 
