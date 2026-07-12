@@ -45,6 +45,15 @@ function App() {
     return () => window.removeEventListener('userStateChanged', checkUser);
   }, [location.pathname]); // Re-check on navigation as well
 
+  useEffect(() => {
+    // Remove the static splash screen once React has Hydrated
+    const splash = document.getElementById('splash-screen');
+    if (splash) {
+      splash.style.opacity = '0';
+      setTimeout(() => splash.remove(), 500);
+    }
+  }, []);
+
   const handleSignOut = (e: React.MouseEvent) => {
     e.preventDefault();
     localStorage.removeItem('quantumEdgeUser');

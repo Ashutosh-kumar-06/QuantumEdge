@@ -5,7 +5,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import Editor from '@monaco-editor/react';
+import { Suspense, lazy } from 'react';
+const Editor = lazy(() => import('@monaco-editor/react'));
 import type { Module } from '../types';
 import '../App.css';
 import { useProgress } from '../context/ProgressContext';
@@ -217,6 +218,25 @@ export default function Lab() {
   const [showProModal, setShowProModal] = useState(false);
   
   const [history, setHistory] = useState<any[]>([]);
+  const [isConnected, setIsConnected] = useState(socket.connected);
+
+  useEffect(() => {
+    const onConnect = () => setIsConnected(true);
+    const onDisconnect = () => setIsConnected(false);
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    return () => {
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+    };
+  }, []);
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // AI Pair Programmer state
   const editorRef = useRef<any>(null);
@@ -331,6 +351,24 @@ export default function Lab() {
           })
           .catch(err => console.error(err));
       }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!localStorage.getItem('tour_seen')) {
+      // Small timeout to allow UI to render first
+      setTimeout(() => {
+        const d = driver({
+          showProgress: true,
+          steps: [
+            { element: '.tour-code-editor', popover: { title: 'Welcome to QuantumEdge', description: 'This is your interactive quantum coding environment.' } },
+            { element: '.tour-visual-builder', popover: { title: 'Visual Builder', description: 'Switch between writing Python/C++ code and a drag-and-drop circuit builder.' } },
+            { element: '.tour-run-btn', popover: { title: 'Execution', description: 'Run your circuits securely on our ephemeral Docker backends.' } },
+          ]
+        });
+        d.drive();
+        localStorage.setItem('tour_seen', 'true');
+      }, 1000);
     }
   }, []);
 
@@ -473,6 +511,10 @@ export default function Lab() {
       
       socket.on('connect', () => {
         socket.emit('subscribe_job', data.jobId);
+      });
+
+      socket.on('job_status', (jobData) => {
+        setOutput(prev => ({ ...prev, status: jobData.status }));
       });
 
       socket.on('job_result', (jobData) => {
@@ -652,7 +694,14 @@ export default function Lab() {
           {/* Top Header */}
           <div className="lab-header" style={{ padding: '0.5rem 1rem', background: 'rgba(0,0,0,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <h2 style={{ margin: 0, fontSize: '1.1rem' }}>{module.title}</h2>
+              <h2 style={{ margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {module.title}
+                {!isConnected && (
+                  <span style={{ fontSize: '0.75rem', padding: '2px 6px', background: '#ef4444', color: 'white', borderRadius: '4px', animation: 'pulse 2s infinite' }}>
+                    Reconnecting...
+                  </span>
+                )}
+              </h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '1rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '1rem' }}>
                 <button 
                   title="Code Editor"
@@ -662,6 +711,7 @@ export default function Lab() {
                   <span style={{ fontSize: '0.8rem', fontWeight: viewMode === 'code' ? 'bold' : 'normal' }}>Code</span>
                 </button>
                 <button 
+                  className="tour-visual-builder"
                   title="Visual Builder"
                   onClick={() => setViewMode('builder')} 
                   style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0.4rem 0.8rem', background: viewMode === 'builder' ? 'rgba(100, 255, 218, 0.1)' : 'transparent', border: viewMode === 'builder' ? '1px solid rgba(100,255,218,0.3)' : '1px solid transparent', borderRadius: '4px', color: viewMode === 'builder' ? 'var(--primary)' : '#888', cursor: 'pointer', transition: 'all 0.2s' }}>
@@ -669,6 +719,7 @@ export default function Lab() {
                   <span style={{ fontSize: '0.8rem', fontWeight: viewMode === 'builder' ? 'bold' : 'normal' }}>Builder</span>
                 </button>
                 <button 
+                  className="tour-ai-review"
                   title="AI Code Review"
                   onClick={requestAiReview} disabled={reviewLoading}
                   style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0.4rem 0.8rem', background: 'transparent', border: '1px solid transparent', borderRadius: '4px', color: '#888', cursor: reviewLoading ? 'wait' : 'pointer', transition: 'all 0.2s' }}
@@ -679,6 +730,7 @@ export default function Lab() {
                   <span style={{ fontSize: '0.8rem' }}>AI Review</span>
                 </button>
                 <button 
+                  className="tour-ai-autocomplete"
                   title="AI Pair Programmer"
                   onClick={triggerAiAutocomplete} disabled={isAiTyping}
                   style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0.4rem 0.8rem', background: 'transparent', border: '1px solid transparent', borderRadius: '4px', color: '#888', cursor: isAiTyping ? 'wait' : 'pointer', transition: 'all 0.2s' }}
@@ -689,6 +741,7 @@ export default function Lab() {
                   <span style={{ fontSize: '0.8rem' }}>AI Autocomplete</span>
                 </button>
                 <button 
+                  className="tour-save-btn"
                   title="Save to Cloud"
                   onClick={saveProject}
                   style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0.4rem 0.8rem', background: 'transparent', border: '1px solid transparent', borderRadius: '4px', color: '#888', cursor: 'pointer', transition: 'all 0.2s' }}
@@ -715,7 +768,7 @@ export default function Lab() {
               </select>
 
               <button 
-                className="run-btn" 
+                className="tour-run-btn" 
                 onClick={runCode} 
                 disabled={loading}
                 style={{ background: 'var(--primary)', color: '#000', border: 'none', padding: '0.4rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
@@ -728,7 +781,7 @@ export default function Lab() {
           <div style={{ flex: 1, display: 'flex', position: 'relative' }}>
             <div style={{ flex: 1 }}>
               <ResizableSplit
-                direction="horizontal"
+                direction={isMobile ? 'vertical' : 'horizontal'}
                 initialRatio={50}
                 storageKey="qe-main-split"
                 first={
@@ -761,24 +814,34 @@ export default function Lab() {
 
                   <div style={{ flex: 1 }}>
                     {viewMode === 'code' ? (
-                      <Editor
-                        height="100%"
-                        defaultLanguage={language}
-                        language={language}
-                        theme="vs-dark"
-                        value={files[activeFile]}
-                        onMount={(editor) => { editorRef.current = editor; }}
-                        onChange={(val) => {
-                          setFiles(prev => ({ ...prev, [activeFile]: val || '' }));
-                        }}
-                        options={{
-                          minimap: { enabled: false },
-                          fontSize: 14,
-                          wordWrap: 'on',
-                          scrollBeyondLastLine: false,
-                          padding: { top: 16 }
-                        }}
-                      />
+                      <Suspense fallback={<div style={{ padding: 20, color: '#38bdf8' }}>Loading Editor...</div>}>
+                        <Editor
+                          height="100%"
+                          defaultLanguage={language}
+                          language={language}
+                          theme="vs-dark"
+                          value={files[activeFile]}
+                          onMount={(editor, monaco) => { 
+                            editorRef.current = editor; 
+                            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+                              runCode();
+                            });
+                            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+                              // Save is auto-handled by state, just prevent default browser save
+                            });
+                          }}
+                          onChange={(val) => {
+                            setFiles(prev => ({ ...prev, [activeFile]: val || '' }));
+                          }}
+                          options={{
+                            minimap: { enabled: false },
+                            fontSize: 14,
+                            wordWrap: 'on',
+                            scrollBeyondLastLine: false,
+                            padding: { top: 16 }
+                          }}
+                        />
+                      </Suspense>
                     ) : (
                       <CircuitBuilder 
                         onCodeGenerated={(code) => setFiles(prev => ({ ...prev, [activeFile]: code }))} 

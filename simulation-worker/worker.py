@@ -30,8 +30,10 @@ def connect_queue():
             time.sleep(5)
 
 # Function to execute the user's Python code securely
-def run_simulation(code, noise_model='ideal'):
+def run_simulation(code, noise_model='ideal', status_callback=None):
     try:
+        if status_callback:
+            status_callback("Provisioning Sandbox...")
         # Secure DooD (Docker-out-of-Docker) execution: 
         # Spawn an ephemeral, network-disabled container to run the untrusted code
         cmd = [
@@ -46,17 +48,22 @@ def run_simulation(code, noise_model='ideal'):
         
         # Pass both code and noiseModel via stdin as JSON
         payload = json.dumps({"code": code, "noiseModel": noise_model})
-        process = subprocess.run(cmd, input=payload, capture_output=True, text=True, timeout=15)
+        
+        process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if status_callback:
+            status_callback("Executing Qiskit Code...")
+            
+        stdout, stderr = process.communicate(input=payload, timeout=15)
         
         # If the docker command failed (non-zero return code), return the error message
         if process.returncode != 0:
-            return {"error": "Execution failed:\n" + process.stderr}
+            return {"error": "Execution failed:\n" + stderr}
             
         # The sandbox_runner prints its results as a JSON string. Parse it back into a dictionary
         try:
-            return json.loads(process.stdout)
+            return json.loads(stdout)
         except json.JSONDecodeError:
-            return {"error": "Failed to parse simulation output:\n" + process.stdout}
+            return {"error": "Failed to parse simulation output:\n" + stdout}
             
     except subprocess.TimeoutExpired:
         # If the code takes longer than 15 seconds, kill it
@@ -75,8 +82,12 @@ def callback(ch, method, properties, body):
     # Extract the code from the job
     code = job.get('code')
     noise_model = job.get('noiseModel', 'ideal')
+    
+    def status_callback(status_msg):
+        ch.basic_publish(exchange='', routing_key='job_results', body=json.dumps({"jobId": job_id, "status": status_msg}))
+        
     # Run the simulation and get the results
-    result = run_simulation(code, noise_model)
+    result = run_simulation(code, noise_model, status_callback)
     
     # Prepare the response package to send back to the API Gateway
     response = {

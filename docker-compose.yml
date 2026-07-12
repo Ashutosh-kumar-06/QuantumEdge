@@ -85,6 +85,13 @@ services:
     networks:
       - quantum_network
 
+  yjs-server:
+    build:
+      context: ./yjs-server
+      dockerfile: Dockerfile
+    networks:
+      - quantum_network
+
   # The Frontend service: our React web application
   frontend:
     build:

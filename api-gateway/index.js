@@ -251,7 +251,15 @@ async function connectQueue() {
       if (msg !== null) {
         try {
           const data = JSON.parse(msg.content.toString());
-          const { jobId, result } = data;
+          const { jobId, result, status: intermediateStatus } = data;
+          
+          if (intermediateStatus) {
+            await Job.findOneAndUpdate({ jobId }, { status: intermediateStatus });
+            io.to(jobId).emit('job_status', { status: intermediateStatus });
+            channel.ack(msg);
+            return;
+          }
+
           const status = result.error ? 'failed' : 'completed';
           await Job.findOneAndUpdate({ jobId }, { status, result });
           

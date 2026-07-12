@@ -1,8 +1,8 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, Suspense, lazy } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
-import SharedEditor from '../components/SharedEditor';
-import SharedWhiteboard from '../components/SharedWhiteboard';
+const SharedEditor = lazy(() => import('../components/SharedEditor'));
+const SharedWhiteboard = lazy(() => import('../components/SharedWhiteboard'));
 import MultiplayerVideoCall from '../components/MultiplayerVideoCall';
 import HostControls from '../components/HostControls';
 
@@ -151,11 +151,13 @@ export default function VideoPage() {
             </div>
             
             <div style={{ flex: 1, position: 'relative' }}>
-              {viewMode === 'code' ? (
-                <SharedEditor socket={socket} roomId={socketRoomId!} readOnly={!canEdit} code={code} setCode={setCode} username={user.email} />
-              ) : (
-                <SharedWhiteboard socket={socket} roomId={socketRoomId!} readOnly={!canEdit} username={user.email} />
-              )}
+              <Suspense fallback={<div style={{ padding: 20, color: '#38bdf8' }}>Loading Workspace...</div>}>
+                {viewMode === 'code' ? (
+                  <SharedEditor socket={socket} roomId={socketRoomId!} readOnly={!canEdit} code={code} setCode={setCode} username={user.email} />
+                ) : (
+                  <SharedWhiteboard socket={socket} roomId={socketRoomId!} readOnly={!canEdit} username={user.email} />
+                )}
+              </Suspense>
             </div>
 
             {/* Terminal Pane */}

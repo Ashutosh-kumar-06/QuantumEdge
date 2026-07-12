@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Editor from '@monaco-editor/react';
 import { Socket } from 'socket.io-client';
+import * as Y from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
+import { MonacoBinding } from 'y-monaco';
 
 interface SharedEditorProps {
   socket: Socket;
@@ -8,77 +11,63 @@ interface SharedEditorProps {
   readOnly: boolean;
   code: string;
   setCode: (code: string) => void;
+  username: string;
 }
 
-export default function SharedEditor({ socket, roomId, readOnly, code, setCode, username }: SharedEditorProps) {
-  const [isRemoteUpdate, setIsRemoteUpdate] = useState(false);
+export default function SharedEditor({ roomId, readOnly, code, setCode, username }: SharedEditorProps) {
   const editorRef = useRef<any>(null);
-  const decorationsRef = useRef<any>(null);
-  const remoteCursorsRef = useRef<{[user: string]: {line: number, col: number}}>({});
+  const ydocRef = useRef<Y.Doc | null>(null);
+  const providerRef = useRef<WebsocketProvider | null>(null);
+  const bindingRef = useRef<MonacoBinding | null>(null);
 
   useEffect(() => {
-    socket.on('code_update', ({ code: remoteCode }) => {
-      setIsRemoteUpdate(true);
-      setCode(remoteCode);
-    });
+    const ydoc = new Y.Doc();
+    ydocRef.current = ydoc;
 
-    socket.on('cursor_move', ({ username: remoteUser, line, col }) => {
-      if (remoteUser === username || !remoteUser) return;
-      remoteCursorsRef.current = {
-        ...remoteCursorsRef.current,
-        [remoteUser]: { line, col }
-      };
-      updateDecorations();
+    const wsUrl = window.location.protocol === 'https:' 
+      ? `wss://${window.location.host}/yjs` 
+      : `ws://${window.location.host}/yjs`;
+
+    const provider = new WebsocketProvider(wsUrl, roomId, ydoc);
+    providerRef.current = provider;
+
+    provider.awareness.setLocalStateField('user', {
+      name: username,
+      color: '#' + Math.floor(Math.random()*16777215).toString(16)
     });
 
     return () => {
-      socket.off('code_update');
-      socket.off('cursor_move');
+      bindingRef.current?.destroy();
+      provider.destroy();
+      ydoc.destroy();
     };
-  }, [socket, setCode, username]);
-
-  const updateDecorations = () => {
-    if (!decorationsRef.current || !editorRef.current) return;
-    const decorations: any[] = [];
-    const monaco = (window as any).monaco;
-    if (!monaco) return;
-
-    Object.entries(remoteCursorsRef.current).forEach(([user, pos]) => {
-      decorations.push({
-        range: new monaco.Range(pos.line, pos.col, pos.line, pos.col),
-        options: {
-          className: 'remote-cursor',
-          hoverMessage: { value: `**${user}** is editing here` },
-          isWholeLine: false,
-        }
-      });
-    });
-    decorationsRef.current.set(decorations);
-  };
+  }, [roomId, username]);
 
   const handleEditorDidMount = (editor: any, monaco: any) => {
     editorRef.current = editor;
-    (window as any).monaco = monaco; // Save monaco to window for updateDecorations
-    decorationsRef.current = editor.createDecorationsCollection([]);
-    
-    editor.onDidChangeCursorPosition((e: any) => {
-      if (!username) return;
-      socket.emit('cursor_move', {
-        roomId,
-        username,
-        line: e.position.lineNumber,
-        col: e.position.column
-      });
+
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      // Just prevent default save
     });
+
+    if (ydocRef.current && providerRef.current) {
+      const type = ydocRef.current.getText('monaco');
+      
+      if (type.length === 0 && code) {
+         type.insert(0, code);
+      }
+
+      bindingRef.current = new MonacoBinding(
+        type,
+        editor.getModel(),
+        new Set([editor]),
+        providerRef.current.awareness
+      );
+    }
   };
 
   const handleEditorChange = (val: string | undefined) => {
-    const newCode = val || '';
-    if (!isRemoteUpdate && !readOnly) {
-      socket.emit('code_update', { roomId, code: newCode });
-    }
-    setCode(newCode);
-    setIsRemoteUpdate(false);
+    setCode(val || '');
   };
 
   return (
@@ -92,9 +81,8 @@ export default function SharedEditor({ socket, roomId, readOnly, code, setCode, 
         height="100%"
         defaultLanguage="python"
         theme="vs-dark"
-        value={code}
-        onChange={handleEditorChange}
         onMount={handleEditorDidMount}
+        onChange={handleEditorChange}
         options={{
           minimap: { enabled: false },
           fontSize: 14,

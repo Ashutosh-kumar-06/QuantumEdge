@@ -30,8 +30,10 @@ def connect_queue():
             time.sleep(5)
 
 # Function to compile and execute the user's C++ QuEST code securely
-def run_cpp_code(code):
+def run_cpp_code(code, status_callback=None):
     try:
+        if status_callback:
+            status_callback("Provisioning Sandbox (C++)...")
         # Secure DooD (Docker-out-of-Docker) execution: 
         # Spawn an ephemeral, network-disabled container to compile and run the C++ code
         cmd = [
@@ -49,14 +51,18 @@ def run_cpp_code(code):
         ]
         
         # Run the docker command, passing the user's C++ code via standard input (stdin)
-        process = subprocess.run(cmd, input=code, capture_output=True, text=True, timeout=15)
+        process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if status_callback:
+            status_callback("Compiling & Executing QuEST Code...")
+            
+        stdout, stderr = process.communicate(input=code, timeout=15)
         
         # If compilation or execution failed (non-zero return code), return the stderr output
         if process.returncode != 0:
-            return {"error": "Compilation/Execution failed:\n" + process.stderr}
+            return {"error": "Compilation/Execution failed:\n" + stderr}
             
         # Return success with the standard output from the C++ program
-        return {"status": "success", "counts": process.stdout, "diagram": "QuEST C++ Simulation completed securely."}
+        return {"status": "success", "counts": stdout, "diagram": "QuEST C++ Simulation completed securely."}
         
     except subprocess.TimeoutExpired:
         # If the compilation or execution takes longer than 15 seconds, kill it
@@ -73,8 +79,11 @@ def callback(ch, method, properties, body):
     
     # Extract the code
     code = job.get('code')
+    def status_callback(status_msg):
+        ch.basic_publish(exchange='', routing_key='job_results', body=json.dumps({"jobId": job_id, "status": status_msg}))
+
     # Run the C++ code compilation and execution
-    result = run_cpp_code(code)
+    result = run_cpp_code(code, status_callback)
     
     # Prepare the response package
     response = {

@@ -91,6 +91,7 @@ graph TD
     TURN((Coturn<br/>TURN Server)):::client
     Firebase((Firebase<br/>Auth API)):::client
     Gemini((Gemini AI<br/>API)):::client
+    Yjs[Yjs CRDT Server<br/>WebSocket]:::api
     
     subgraph Workers
         PyWorker[Python Worker<br/>Qiskit]:::worker
@@ -107,6 +108,8 @@ graph TD
     ClientBrowsers -- "HTTPS / WSS (REST & Socket.io)" --> Nginx
     ClientBrowsers -. "STUN/TURN Relay" .-> TURN
     Nginx -- "Reverse Proxy\nRound Robin" --> API
+    Nginx -- "/yjs/ Proxy" --> Yjs
+    ClientBrowsers -- "WSS Sync" --> Yjs
     API <--> Redis
     API <--> Mongo
     API -- "REST / WebSocket Stream" --> Gemini
