@@ -1,40 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
-import { useEffect, useRef, useState } from 'react';
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [hasInteracted, setHasInteracted] = useState(false);
-
-  useEffect(() => {
-    // Autoplay policy requires user interaction to play unmuted audio.
-    // So we wait for any click on the page to start the audio.
-    const handleInteraction = () => {
-      if (!hasInteracted && audioRef.current) {
-        audioRef.current.play().catch(e => console.warn("Audio play blocked", e));
-        setIsPlaying(true);
-        setHasInteracted(true);
-      }
-    };
-    window.addEventListener('click', handleInteraction, { once: true });
-    return () => window.removeEventListener('click', handleInteraction);
-  }, [hasInteracted]);
-
-  const toggleAudio = (e: React.MouseEvent) => {
-    e.stopPropagation(); // prevent triggering the global interaction handler again if not needed
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current.play();
-        setIsPlaying(true);
-      }
-      setHasInteracted(true);
-    }
-  };
 
   const features = [
     {
@@ -66,7 +34,7 @@ export default function LandingPage() {
   return (
     <div className="landing-container" style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
       
-      {/* Background Video */}
+      {/* Background Video (Local) */}
       <video 
         autoPlay 
         loop 
@@ -84,14 +52,9 @@ export default function LandingPage() {
           filter: 'brightness(0.3) contrast(1.2)'
         }}
       >
-        <source src="https://cdn.pixabay.com/video/2019/11/17/29267-374668265_large.mp4" type="video/mp4" />
+        <source src="/background.webm" type="video/webm" />
         Your browser does not support the video tag.
       </video>
-
-      {/* Background Audio */}
-      <audio ref={audioRef} loop>
-        <source src="https://cdn.pixabay.com/audio/2022/10/25/audio_227e704e6c.mp3" type="audio/mp3" />
-      </audio>
 
       {/* Overlay Gradient */}
       <div style={{
@@ -103,29 +66,6 @@ export default function LandingPage() {
         background: 'radial-gradient(circle at center, rgba(15, 23, 42, 0.2) 0%, rgba(15, 23, 42, 0.8) 100%)',
         zIndex: -1
       }}></div>
-
-      {/* Audio Toggle */}
-      <button 
-        onClick={toggleAudio}
-        style={{
-          position: 'absolute',
-          top: '20px',
-          right: '20px',
-          background: 'rgba(255,255,255,0.1)',
-          border: '1px solid rgba(255,255,255,0.2)',
-          color: '#fff',
-          padding: '10px 15px',
-          borderRadius: '30px',
-          cursor: 'pointer',
-          backdropFilter: 'blur(5px)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          zIndex: 10
-        }}
-      >
-        {isPlaying ? '🔊 Sound On' : '🔇 Sound Off'}
-      </button>
 
       {/* Hero Content */}
       <div style={{ textAlign: 'center', zIndex: 1, padding: '2rem', maxWidth: '1000px', width: '100%' }}>

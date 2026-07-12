@@ -15,7 +15,7 @@ let auth: any = null;
 let googleProvider: any = null;
 
 try {
-  if (firebaseConfig.apiKey) {
+  if (firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId) {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     googleProvider = new GoogleAuthProvider();
