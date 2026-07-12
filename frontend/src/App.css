@@ -14,27 +14,18 @@
 
 /* The :root pseudo-class targets the <html> element — the highest level of the document */
 :root {
-  /* The primary accent color — bright cyan used for highlights, links, and interactive elements */
-  --primary: #45f3ff;
-  /* The secondary accent color — a rich purple used for gradients and AI-related elements */
-  --secondary: #7b2cbf;
-  /* The dark background color used as the page's base color */
-  --bg-dark: #0f111a;
-  /* A very subtle white tint (5% opacity) used for glass-panel backgrounds */
-  --glass-bg: rgba(255, 255, 255, 0.05);
-  /* A slightly more visible white (10% opacity) used for borders on glass panels */
-  --glass-border: rgba(255, 255, 255, 0.1);
-  /* The main text color — a light grayish-white for comfortable reading on dark backgrounds */
-  --text: #e2e8f0;
-  /* A muted/dimmed text color — a medium gray for secondary or less important text */
+  /* Premium Slate Dark Theme */
+  --primary: #00f2fe;
+  --secondary: #4facfe;
+  --bg-dark: #0f172a;
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --text: #f8fafc;
   --text-muted: #94a3b8;
-  /* A bright green color used to indicate success, completion, and positive states */
-  --success: #00ff88;
-  /* A bright red color used to indicate errors, warnings, and danger states */
-  --danger: #ff4757;
-  /* Dark panels and borders for IDE */
-  --panel-bg: rgba(15, 17, 26, 0.6);
-  --border-color: rgba(255, 255, 255, 0.1);
+  --success: #10b981;
+  --danger: #ef4444;
+  --panel-bg: rgba(15, 23, 42, 0.6);
+  --border-color: rgba(255, 255, 255, 0.08);
 }
 
 /* 
@@ -42,22 +33,15 @@
  * Sets the global font, dark background with decorative gradient blobs, and text color.
  */
 body {
-  /* Removes all default margins that browsers add around the body */
   margin: 0;
-  /* Sets the primary font to "Inter"; falls back to the system's default UI font, then any sans-serif */
-  font-family: 'Inter', system-ui, sans-serif;
-  /* Applies the dark background color from our custom properties */
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background: var(--bg-dark);
-  /* Creates two decorative radial gradient "blobs" for visual atmosphere:
-     - A purple glow in the lower-left area (15% from left, 50% from top)
-     - A cyan glow in the upper-right area (85% from left, 30% from top) */
   background-image: 
-    radial-gradient(circle at 15% 50%, rgba(123, 44, 191, 0.15), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(69, 243, 255, 0.1), transparent 25%);
-  /* Sets the default text color for all content on the page */
+    radial-gradient(circle at 0% 0%, rgba(79, 172, 254, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(0, 242, 254, 0.1) 0%, transparent 50%);
   color: var(--text);
-  /* Ensures the body is at least as tall as the full browser window */
   min-height: 100vh;
+  letter-spacing: -0.01em;
 }
 
 /* 
@@ -97,16 +81,13 @@ body {
  * Combines a semi-transparent background with backdrop blur for the glass effect.
  */
 .glass-panel {
-  /* Semi-transparent background lets content behind show through faintly */
   background: var(--glass-bg);
-  /* Blurs whatever is behind this element by 12px, creating the frosted glass effect */
-  backdrop-filter: blur(12px);
-  /* A subtle border to define the panel's edges against the dark background */
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
-  /* Rounds the corners by 12px for a smooth, modern card appearance */
-  border-radius: 12px;
-  /* A large, soft shadow to create depth and make the panel appear elevated */
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 
@@ -347,12 +328,10 @@ nav ul li.active a, nav ul li.active span {
  * a cyan-tinted glow to indicate interactivity.
  */
 .module-card:hover {
-  /* Moves the card 5px upward for a "floating" effect */
-  transform: translateY(-5px);
-  /* Adds a large cyan-tinted shadow below the card for a glowing hover effect */
-  box-shadow: 0 12px 40px 0 rgba(69, 243, 255, 0.2);
-  /* Changes the border to a more visible cyan to highlight the card */
-  border-color: rgba(69, 243, 255, 0.3);
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 20px 40px -10px rgba(0, 242, 254, 0.15);
+  border-color: rgba(0, 242, 254, 0.3);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .module-card:hover .card-arrow {
