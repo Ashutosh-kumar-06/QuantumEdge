@@ -8,7 +8,7 @@ import HostControls from '../components/HostControls';
 
 const socket: Socket = io(import.meta.env.VITE_API_URL || '', {
   path: '/socket.io',
-  transports: ['websocket', 'polling']
+  transports: ['websocket']
 });
 
 export default function VideoPage() {

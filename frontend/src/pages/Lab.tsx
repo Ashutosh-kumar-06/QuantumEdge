@@ -21,7 +21,7 @@ import 'driver.js/dist/driver.css';
 
 const socket = io(import.meta.env.VITE_API_URL || '', {
   path: '/socket.io',
-  transports: ['websocket', 'polling']
+  transports: ['websocket']
 });
 
 // ============================================================================
