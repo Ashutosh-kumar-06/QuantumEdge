@@ -27,7 +27,17 @@ export default function ChatPage() {
     }
   }, [roomId]);
 
+  const [code, setCode] = useState('// Welcome to the Shared Code Editor\n');
+  const [language, setLanguage] = useState<'python' | 'cpp'>('python');
+  const [noiseModel, setNoiseModel] = useState<'ideal' | 'depolarizing' | 'thermal'>('ideal');
+  const [output, setOutput] = useState<any>(null);
+  const [running, setRunning] = useState(false);
+
   useEffect(() => {
+    socket.on('terminal_output', ({ output: remoteOutput }) => {
+      setOutput(remoteOutput);
+    });
+    
     socket.on('room_state', (state) => {
       setRoomState(state);
     });
@@ -38,10 +48,32 @@ export default function ChatPage() {
     });
 
     return () => {
+      socket.off('terminal_output');
       socket.off('room_state');
       socket.off('room_ended');
     };
   }, [navigate]);
+
+  const runSimulation = async () => {
+    setRunning(true);
+    setOutput({ status: 'Executing on cluster...' });
+    
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/simulate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, language, noiseModel })
+      });
+      const data = await res.json();
+      setOutput(data);
+      socket.emit('terminal_output', { roomId, output: data });
+    } catch (e: any) {
+      const err = { error: e.message };
+      setOutput(err);
+      socket.emit('terminal_output', { roomId, output: err });
+    }
+    setRunning(false);
+  };
 
   if (!user) {
     return (
@@ -73,8 +105,45 @@ export default function ChatPage() {
       <HostControls roomState={roomState} currentUser={user.email} onUpdatePermission={handleUpdatePermission} />
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <div style={{ flex: 1, borderRight: '1px solid var(--border-color)', position: 'relative' }}>
-          <SharedEditor socket={socket} roomId={roomId!} readOnly={!canEdit} />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-color)' }}>
+          {/* Execution Bar */}
+          <div style={{ display: 'flex', gap: '1rem', padding: '0.5rem 1rem', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid var(--border-color)', alignItems: 'center' }}>
+            <select value={language} onChange={e => setLanguage(e.target.value as any)} style={{ background: '#222', color: '#fff', border: '1px solid #444', padding: '0.4rem', borderRadius: '4px' }}>
+              <option value="python">Qiskit (Python)</option>
+              <option value="cpp">QuEST (C++)</option>
+            </select>
+            <select value={noiseModel} onChange={e => setNoiseModel(e.target.value as any)} style={{ background: '#222', color: '#fff', border: '1px solid #444', padding: '0.4rem', borderRadius: '4px' }}>
+              <option value="ideal">Ideal (No Noise)</option>
+              <option value="depolarizing">Depolarizing Noise</option>
+              <option value="thermal">Thermal Relaxation</option>
+            </select>
+            <button onClick={runSimulation} disabled={running || !canEdit} style={{ background: 'var(--primary)', color: '#000', border: 'none', padding: '0.4rem 1.5rem', borderRadius: '4px', fontWeight: 'bold', cursor: (running || !canEdit) ? 'not-allowed' : 'pointer', opacity: (running || !canEdit) ? 0.7 : 1 }}>
+              {running ? 'Running...' : 'Run Simulation'}
+            </button>
+          </div>
+          
+          <div style={{ flex: 1, position: 'relative' }}>
+            <SharedEditor socket={socket} roomId={roomId!} readOnly={!canEdit} code={code} setCode={setCode} />
+          </div>
+
+          {/* Terminal Pane */}
+          <div style={{ height: '30%', borderTop: '1px solid var(--border-color)', background: '#0d0d0d', padding: '1rem', overflowY: 'auto', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+            {output ? (
+              <>
+                {output.output && output.output.trim() !== '' && (
+                  <div style={{ color: '#ccc', marginBottom: '0.5rem' }}>{output.output}</div>
+                )}
+                {output.error && (
+                  <div style={{ color: '#ff5555' }}>{output.error}</div>
+                )}
+                {output.status && !output.error && (!output.output || output.output.trim() === '') && (
+                  <div style={{ color: '#888' }}>{output.status}</div>
+                )}
+              </>
+            ) : (
+              <div style={{ color: '#666' }}>Terminal Output...</div>
+            )}
+          </div>
         </div>
         <div style={{ width: '400px', display: 'flex', flexDirection: 'column', background: 'var(--panel-bg)' }}>
           <MultiplayerChat 

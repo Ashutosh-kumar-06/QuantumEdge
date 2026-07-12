@@ -740,7 +740,7 @@ export default function Lab() {
 
                     {/* Terminal Tab */}
                     {activeOutputTab === 'terminal' && (
-                      <div className="tour-terminal" style={{ height: '100%', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                      <div className="tour-terminal" style={{ height: '100%', fontFamily: 'monospace', whiteSpace: 'pre-wrap', padding: '1rem', background: '#0d0d0d', overflowY: 'auto' }}>
                         {aiFeedback && (
                           <div className="ai-feedback" style={{ marginBottom: '1rem', padding: '1rem', background: 'rgba(100,255,218,0.1)', borderLeft: '4px solid var(--primary)', borderRadius: '4px' }}>
                             <strong style={{ color: 'var(--primary)' }}>✨ AI Reviewer:</strong>
@@ -750,20 +750,12 @@ export default function Lab() {
                         {output ? (
                           <>
                             {output.output && output.output.trim() !== '' && (
-                              <div style={{ color: '#ccc', marginBottom: '1rem' }}>{output.output}</div>
-                            )}
-                            {output.counts && (
-                              <div style={{ color: '#00ff88', marginBottom: '1rem' }}>
-                                <strong>Raw Measurement Counts:</strong>
-                                <pre style={{ background: 'rgba(0,0,0,0.3)', padding: '0.5rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                  {JSON.stringify(output.counts, null, 2)}
-                                </pre>
-                              </div>
+                              <div style={{ color: '#ccc', marginBottom: '0.5rem' }}>{output.output}</div>
                             )}
                             {output.error && (
-                              <div style={{ color: '#ff5555' }}><strong>Error:</strong> {output.error}</div>
+                              <div style={{ color: '#ff5555' }}>{output.error}</div>
                             )}
-                            {output.status && !output.counts && !output.error && (!output.output || output.output.trim() === '') && (
+                            {output.status && !output.error && (!output.output || output.output.trim() === '') && (
                               <div style={{ color: '#888' }}>{output.status}</div>
                             )}
                           </>

@@ -92,6 +92,11 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('code_update', { code });
   });
 
+  // Shared Terminal Sync
+  socket.on('terminal_output', ({ roomId, output }) => {
+    socket.to(roomId).emit('terminal_output', { output });
+  });
+
   // Dedicated Meeting Rooms (Chat & Video) Role-Based Access Control
   socket.on('join_meeting', ({ roomId, username }) => {
     socket.join(roomId);

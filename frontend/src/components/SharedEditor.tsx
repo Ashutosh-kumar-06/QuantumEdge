@@ -6,10 +6,11 @@ interface SharedEditorProps {
   socket: Socket;
   roomId: string;
   readOnly: boolean;
+  code: string;
+  setCode: (code: string) => void;
 }
 
-export default function SharedEditor({ socket, roomId, readOnly }: SharedEditorProps) {
-  const [code, setCode] = useState('// Welcome to the Shared Code Editor\n');
+export default function SharedEditor({ socket, roomId, readOnly, code, setCode }: SharedEditorProps) {
   const [isRemoteUpdate, setIsRemoteUpdate] = useState(false);
 
   useEffect(() => {
@@ -20,7 +21,7 @@ export default function SharedEditor({ socket, roomId, readOnly }: SharedEditorP
     return () => {
       socket.off('code_update');
     };
-  }, [socket]);
+  }, [socket, setCode]);
 
   const handleEditorChange = (val: string | undefined) => {
     const newCode = val || '';
