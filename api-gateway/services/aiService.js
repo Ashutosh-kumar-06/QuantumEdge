@@ -52,10 +52,20 @@ async function getQuantumChatResponse(history, newPrompt, codeContext) {
   const ai = new GoogleGenAI({ apiKey });
   
   // Format history for Gemini (roles: 'user' or 'model')
-  const formattedHistory = history.map(msg => ({
+  let formattedHistory = history.map(msg => ({
     role: msg.role === 'ai' ? 'model' : 'user',
-    parts: [{ text: msg.content }]
+    parts: [{ text: msg.content || '...' }]
   }));
+
+  // Gemini API requires the first message in history to be from the 'user'.
+  // If it starts with 'model' (which happens because the first message is often the initial AI feedback),
+  // we must prepend a dummy user message to satisfy the API constraints.
+  if (formattedHistory.length > 0 && formattedHistory[0].role === 'model') {
+    formattedHistory.unshift({
+      role: 'user',
+      parts: [{ text: 'Please review my quantum circuit code.' }]
+    });
+  }
 
   const systemPrompt = `You are a brilliant and encouraging Quantum Computing Teaching Assistant.
 The student is currently working on this code:
