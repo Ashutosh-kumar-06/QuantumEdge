@@ -17,7 +17,8 @@ const ProjectSchema = new mongoose.Schema({
   },
   author: {
     type: String,
-    required: false
+    required: false,
+    index: true
   },
   createdAt: {
     type: Date,
