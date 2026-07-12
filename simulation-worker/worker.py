@@ -57,20 +57,23 @@ def run_simulation(code, noise_model='ideal', status_callback=None):
         
         # If the docker command failed (non-zero return code), return the error message
         if process.returncode != 0:
-            return {"error": "Execution failed:\n" + stderr}
+            if "docker:" in stderr or "Cannot connect to the Docker daemon" in stderr:
+                return {"error": "Failed to provision secure container:\n" + stderr, "errorType": "docker"}
+            else:
+                return {"error": "Execution failed:\n" + stderr, "errorType": "runtime"}
             
         # The sandbox_runner prints its results as a JSON string. Parse it back into a dictionary
         try:
             return json.loads(stdout)
         except json.JSONDecodeError:
-            return {"error": "Failed to parse simulation output:\n" + stdout}
+            return {"error": "Failed to parse simulation output:\n" + stdout, "errorType": "system"}
             
     except subprocess.TimeoutExpired:
         # If the code takes longer than 15 seconds, kill it
-        return {"error": "Execution timed out."}
+        return {"error": "Execution timed out (15s limit exceeded).", "errorType": "timeout"}
     except Exception as e:
         # Catch any other unexpected errors
-        return {"error": str(e)}
+        return {"error": str(e), "errorType": "system"}
 
 # Function that gets called automatically whenever a new message arrives in the queue
 def callback(ch, method, properties, body):

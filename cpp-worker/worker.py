@@ -59,16 +59,19 @@ def run_cpp_code(code, status_callback=None):
         
         # If compilation or execution failed (non-zero return code), return the stderr output
         if process.returncode != 0:
-            return {"error": "Compilation/Execution failed:\n" + stderr}
+            if "docker:" in stderr or "Cannot connect to the Docker daemon" in stderr:
+                return {"error": "Failed to provision secure container:\n" + stderr, "errorType": "docker"}
+            else:
+                return {"error": "Compilation/Execution failed:\n" + stderr, "errorType": "compilation"}
             
         # Return success with the standard output from the C++ program
         return {"status": "success", "counts": stdout, "diagram": "QuEST C++ Simulation completed securely."}
         
     except subprocess.TimeoutExpired:
         # If the compilation or execution takes longer than 15 seconds, kill it
-        return {"error": "Execution timed out."}
+        return {"error": "Execution timed out (15s limit exceeded).", "errorType": "timeout"}
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": str(e), "errorType": "system"}
 
 # Function that gets called automatically whenever a new message arrives in the queue
 def callback(ch, method, properties, body):

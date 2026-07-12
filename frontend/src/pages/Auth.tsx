@@ -259,6 +259,15 @@ export default function Auth() {
               </button>
             </div>
             
+            <div style={{ textAlign: 'center', margin: '1.5rem 0', color: 'var(--text-muted)' }}>
+              <span style={{ padding: '0 10px', background: 'var(--panel-bg)' }}>OR</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <button onClick={() => navigate('/lab/sandbox')} style={{ padding: '0.8rem', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.4)', background: 'transparent', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
+                Try without signing in (Guest)
+              </button>
+            </div>
+            
             <p style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.9rem' }}>
               {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
               <span 

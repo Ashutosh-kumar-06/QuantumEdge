@@ -303,8 +303,14 @@ async function connectDB() {
 
 const simulateLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 10,
-  message: { error: 'Simulation rate limit exceeded. Max 10 requests per minute.' },
+  max: async (req) => {
+    // If token exists, limit to 20. If not (Guest Mode), strict limit to 3.
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      return 20;
+    }
+    return 3;
+  },
+  message: { error: 'Simulation rate limit exceeded.', errorType: 'rate_limit' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -608,10 +614,10 @@ app.post('/api/simulate', simulateLimiter, async (req, res) => {
       channel.sendToQueue(queueName, Buffer.from(JSON.stringify(job)));
       return res.json({ jobId, status: 'queued', queue: queueName });
     } else {
-      return res.status(503).json({ error: 'Queue not ready' });
+      return res.status(503).json({ error: 'Queue not ready', errorType: 'queue' });
     }
   } catch (e) {
-    res.status(500).json({ error: 'Failed to create job' });
+    res.status(500).json({ error: 'Failed to create job', errorType: 'queue' });
   }
 });
 

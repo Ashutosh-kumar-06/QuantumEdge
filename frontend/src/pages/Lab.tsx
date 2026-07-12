@@ -500,12 +500,26 @@ export default function Lab() {
     setOutput({ status: 'Running...' });
     setAiFeedback('');
     try {
+      let token = '';
+      if (auth.currentUser) {
+        token = await auth.currentUser.getIdToken();
+      }
+      
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/simulate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ code, language, noiseModel })
       });
       const data = await response.json();
+      
+      if (!response.ok) {
+        setLoading(false);
+        setOutput({ error: data.error, errorType: data.errorType || 'system' });
+        return;
+      }
       
       const socket = io(import.meta.env.VITE_API_URL);
       
@@ -521,7 +535,7 @@ export default function Lab() {
         setLoading(false);
         let result;
         if (jobData.status === 'failed') {
-          result = { error: jobData.result?.error || 'Unknown error occurred.' };
+          result = { error: jobData.result?.error || 'Unknown error occurred.', errorType: jobData.result?.errorType || 'system' };
         } else {
           result = {
             status: 'success',
@@ -910,7 +924,37 @@ export default function Lab() {
                               <div style={{ color: '#ccc', marginBottom: '0.5rem' }}>{output.output}</div>
                             )}
                             {output.error && (
-                              <div style={{ color: '#ff5555' }}>{output.error}</div>
+                              <div style={{
+                                padding: '1rem',
+                                marginTop: '0.5rem',
+                                borderRadius: '4px',
+                                background: output.errorType === 'compilation' ? 'rgba(245, 158, 11, 0.1)' : 
+                                            output.errorType === 'docker' ? 'rgba(168, 85, 247, 0.1)' :
+                                            output.errorType === 'queue' ? 'rgba(234, 179, 8, 0.1)' :
+                                            'rgba(239, 68, 68, 0.1)',
+                                borderLeft: `4px solid ${
+                                  output.errorType === 'compilation' ? '#f59e0b' : 
+                                  output.errorType === 'docker' ? '#a855f7' :
+                                  output.errorType === 'queue' ? '#eab308' :
+                                  '#ef4444'
+                                }`
+                              }}>
+                                <strong style={{ 
+                                  display: 'block', marginBottom: '0.5rem',
+                                  color: output.errorType === 'compilation' ? '#f59e0b' : 
+                                         output.errorType === 'docker' ? '#a855f7' :
+                                         output.errorType === 'queue' ? '#eab308' :
+                                         '#ef4444'
+                                }}>
+                                  {output.errorType === 'compilation' && '⚠️ C++ Compilation Error'}
+                                  {output.errorType === 'docker' && '🐳 Sandbox Provisioning Error'}
+                                  {output.errorType === 'queue' && '🚦 System Queue Error'}
+                                  {output.errorType === 'timeout' && '⏳ Execution Timeout'}
+                                  {output.errorType === 'rate_limit' && '🛑 Rate Limit Exceeded'}
+                                  {(!output.errorType || output.errorType === 'runtime' || output.errorType === 'system') && '❌ Runtime Error'}
+                                </strong>
+                                <div style={{ color: '#ffaaaa' }}>{output.error}</div>
+                              </div>
                             )}
                             {output.status && !output.error && (!output.output || output.output.trim() === '') && (
                               <div style={{ color: '#888' }}>{output.status}</div>
