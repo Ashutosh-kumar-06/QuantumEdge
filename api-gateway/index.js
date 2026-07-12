@@ -447,9 +447,19 @@ app.get('/api/leaderboard', async (req, res) => {
  */
 app.get('/api/user/:username/status', async (req, res) => {
   try {
-    const user = await User.findOne({ username: req.params.username });
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json({ isPro: user.isPro });
+    let user = await User.findOne({ username: req.params.username });
+    if (!user) {
+      user = new User({ username: req.params.username, xp: 0 });
+    }
+    
+    // Automatically grant 30-day trial if they have never had proUntil set
+    if (!user.proUntil) {
+       user.proUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days free trial
+       await user.save();
+    }
+    
+    const isPro = user.proUntil > new Date();
+    res.json({ isPro });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -579,7 +589,7 @@ app.get('/api/jobs', async (req, res) => {
 app.post('/api/payment/orders', requireAuth, async (req, res) => {
   try {
     const options = {
-      amount: 999 * 100, // ₹999 in paise
+      amount: 1 * 100, // ₹1 in paise (1 month extension)
       currency: "INR",
       receipt: `rcpt_${req.user.uid}`
     };
@@ -606,15 +616,17 @@ app.post('/api/payment/verify', requireAuth, async (req, res) => {
       .digest('hex');
 
     if (expectedSignature === razorpay_signature) {
-      // Payment is legit! Upgrade user
-      // req.user has email or uid. We might need to find by email if we don't store uid in Mongo.
-      // Wait, currently frontend passes author = email. Let's find by username or email.
-      // The user model uses `username`. If we pass username from frontend...
+      // Payment is legit! Extend user's Pro status by 30 days
       const { username } = req.body; // passed from frontend
       if (username) {
-         await User.findOneAndUpdate({ username }, { isPro: true });
+         const user = await User.findOne({ username });
+         if (user) {
+            const baseDate = (user.proUntil && user.proUntil > new Date()) ? user.proUntil.getTime() : Date.now();
+            user.proUntil = new Date(baseDate + 30 * 24 * 60 * 60 * 1000); // Add 30 days
+            await user.save();
+         }
       }
-      res.json({ success: true, message: 'Payment verified, upgraded to Pro!' });
+      res.json({ success: true, message: 'Payment verified, extended Pro for 30 days!' });
     } else {
       res.status(400).json({ success: false, error: 'Invalid signature' });
     }

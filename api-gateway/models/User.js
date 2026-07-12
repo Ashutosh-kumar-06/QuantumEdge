@@ -12,7 +12,7 @@ const UserSchema = new mongoose.Schema({
     completed: { type: Boolean, default: false }, // Whether the user has finished the module
     score: { type: Number, default: 0 } // The user's score on any exercises in the module
   }],
-  isPro: { type: Boolean, default: false } // Pro subscription status
+  proUntil: { type: Date } // Expiration date of Pro status (handles trial & paid)
 });
 
 // Export the User model so other files can fetch and update student progress

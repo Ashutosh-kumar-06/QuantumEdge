@@ -796,7 +796,7 @@ export default function Lab() {
             </ul>
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
               <button className="start-btn" onClick={handleUpgrade} style={{ padding: '1rem 2rem', fontSize: '1.1rem' }}>
-                Upgrade Now - ₹999
+                Extend Pro - ₹1/mo
               </button>
               <button className="start-btn" onClick={() => setShowProModal(false)} style={{ background: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)' }}>
                 Maybe Later
