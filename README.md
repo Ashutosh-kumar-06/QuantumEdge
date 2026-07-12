@@ -83,8 +83,8 @@ graph TD
     end
 
     subgraph Ephemeral Sandboxes
-        PySandbox[Python Sandbox<br/>Docker (Network None)]:::worker
-        CppSandbox[C++ Sandbox<br/>Docker (Network None)]:::worker
+        PySandbox["Python Sandbox<br/>Docker (Network None)"]:::worker
+        CppSandbox["C++ Sandbox<br/>Docker (Network None)"]:::worker
     end
 
     %% Flow
