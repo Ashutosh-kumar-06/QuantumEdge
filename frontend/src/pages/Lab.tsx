@@ -218,6 +218,53 @@ export default function Lab() {
   
   const [history, setHistory] = useState<any[]>([]);
 
+  // AI Pair Programmer state
+  const editorRef = useRef<any>(null);
+  const [isAiTyping, setIsAiTyping] = useState(false);
+
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    const handleChunk = ({ chunk }: { chunk: string }) => {
+      setIsAiTyping(true);
+      if (!editorRef.current) return;
+      const position = editorRef.current.getPosition();
+      editorRef.current.executeEdits('ai-autocomplete', [{
+        range: {
+          startLineNumber: position.lineNumber,
+          startColumn: position.column,
+          endLineNumber: position.lineNumber,
+          endColumn: position.column
+        },
+        text: chunk,
+        forceMoveMarkers: true
+      }]);
+      // Reset typing state after 2 seconds of inactivity
+      clearTimeout(timeout);
+      timeout = setTimeout(() => setIsAiTyping(false), 2000);
+    };
+    
+    socket.on('ai_autocomplete_chunk', handleChunk);
+    
+    return () => {
+      socket.off('ai_autocomplete_chunk', handleChunk);
+      clearTimeout(timeout);
+    };
+  }, []);
+
+  const triggerAiAutocomplete = () => {
+    if (!editorRef.current || isAiTyping) return;
+    const position = editorRef.current.getPosition();
+    const model = editorRef.current.getModel();
+    const codeContext = model.getValueInRange({
+      startLineNumber: 1,
+      startColumn: 1,
+      endLineNumber: position.lineNumber,
+      endColumn: position.column
+    });
+    setIsAiTyping(true);
+    socket.emit('ai_autocomplete_request', { code: codeContext, language, roomId: module?.id });
+  };
+
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const projectId = searchParams.get('project');
@@ -324,9 +371,15 @@ export default function Lab() {
       fetch(`${import.meta.env.VITE_API_URL || ''}/api/projects/${projectId}`)
         .then(res => res.json())
         .then(data => {
-          if (data && data.code) {
-            setCode(data.code);
-            setFiles({ 'main.py': data.code });
+          if (data) {
+            if (data.files && Object.keys(data.files).length > 0) {
+              setFiles(data.files);
+              setActiveFile(Object.keys(data.files)[0]);
+            } else if (data.code) {
+              setFiles({ 'main.py': data.code });
+              setActiveFile('main.py');
+            }
+            setCode(data.code || '');
             setLanguage(data.language as 'python' | 'cpp');
           }
         })
@@ -362,7 +415,8 @@ export default function Lab() {
         },
         body: JSON.stringify({ 
           title: module?.title || 'Sandbox Project', 
-          code: files[activeFile], 
+          code: files[activeFile],
+          files: files,
           language, 
           author
         })
@@ -625,6 +679,16 @@ export default function Lab() {
                   <span style={{ fontSize: '0.8rem' }}>AI Review</span>
                 </button>
                 <button 
+                  title="AI Pair Programmer"
+                  onClick={triggerAiAutocomplete} disabled={isAiTyping}
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0.4rem 0.8rem', background: 'transparent', border: '1px solid transparent', borderRadius: '4px', color: '#888', cursor: isAiTyping ? 'wait' : 'pointer', transition: 'all 0.2s' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#fff'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
+                >
+                  <span style={{ fontSize: '1rem' }}>🤖</span>
+                  <span style={{ fontSize: '0.8rem' }}>AI Autocomplete</span>
+                </button>
+                <button 
                   title="Save to Cloud"
                   onClick={saveProject}
                   style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0.4rem 0.8rem', background: 'transparent', border: '1px solid transparent', borderRadius: '4px', color: '#888', cursor: 'pointer', transition: 'all 0.2s' }}
@@ -703,6 +767,7 @@ export default function Lab() {
                         language={language}
                         theme="vs-dark"
                         value={files[activeFile]}
+                        onMount={(editor) => { editorRef.current = editor; }}
                         onChange={(val) => {
                           setFiles(prev => ({ ...prev, [activeFile]: val || '' }));
                         }}

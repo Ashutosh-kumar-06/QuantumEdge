@@ -13,10 +13,15 @@ import type { Module } from '../types';
 import '../App.css';
 import { useProgress } from '../context/ProgressContext';
 
+import { auth } from '../firebase';
+
 export default function CourseModules() {
   const [curriculum, setCurriculum] = useState<Module[]>([]);
   const { isCompleted } = useProgress();
   const [user, setUser] = useState<{email: string, provider: string} | null>(null);
+  
+  const [activeTab, setActiveTab] = useState<'curriculum' | 'projects'>('curriculum');
+  const [projects, setProjects] = useState<any[]>([]);
 
   const navigate = useNavigate();
 
@@ -25,7 +30,9 @@ export default function CourseModules() {
     const savedUser = localStorage.getItem('quantumEdgeUser');
     if (savedUser) {
       try {
-        setUser(JSON.parse(savedUser));
+        const u = JSON.parse(savedUser);
+        setUser(u);
+        fetchProjects(u.email || u.uid);
       } catch (e) {}
     }
 
@@ -36,6 +43,21 @@ export default function CourseModules() {
       })
       .catch(err => console.error("Error fetching curriculum", err));
   }, []);
+
+  const fetchProjects = async (author: string) => {
+    try {
+      const token = auth.currentUser ? await auth.currentUser.getIdToken() : '';
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/projects/user/${encodeURIComponent(author)}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setProjects(data);
+      }
+    } catch (err) {
+      console.error("Error fetching projects", err);
+    }
+  };
 
   const completedCount = curriculum.filter(m => isCompleted(m.id)).length;
   const totalCount = curriculum.length;
@@ -48,71 +70,102 @@ export default function CourseModules() {
         </div>
 
         <div className="progress-overview">
-          {/* Text showing completed count out of total modules */}
           <span>Course Progress: {completedCount} / {totalCount} Modules Completed</span>
-
-          {/* Visual progress bar container (the gray background track) */}
           <div className="progress-bar">
-            {/* The filled portion of the progress bar — its width is calculated as a
-                percentage: (completed / total) * 100. If total is 0, width is 0% to
-                avoid dividing by zero. */}
             <div 
               className="progress-fill" 
               style={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }}
             ></div>
-          {/* End of progress bar */}
           </div>
-        {/* End of progress overview section */}
         </div>
-      {/* End of dashboard header panel */}
       </div>
 
-      {/* Grid container that holds all the module cards */}
-      <div className="module-grid">
-        {/* Loop through each module in the curriculum and create a card for it.
-            '.map()' transforms each module object into a JSX card element. */}
-        {curriculum.map(mod => {
-          // Check if this specific module has been completed by the student
-          const completed = isCompleted(mod.id);
-          
-          // Return a card element for this module
-          return (
-            // Card container div. 'key' is required by React to track list items.
-            // If completed, add the 'completed' CSS class for visual styling (e.g., green border).
-            // Clicking anywhere on the card navigates to that module's tutorial page.
-            <div 
-              key={mod.id} 
-              className={`module-card glass-panel ${completed ? 'completed' : ''}`}
-              onClick={() => navigate(`/tutorial/${mod.id}`)}
-            >
-              {/* Card header area with the module title and a checkmark if completed */}
-              <div className="card-header">
-                {/* Display the module title */}
-                <h3>{mod.title}</h3>
-                {/* If the module is completed, show a green checkmark icon */}
-                {completed && <span className="status-icon">✓</span>}
-              {/* End of card header */}
-              </div>
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+        <button 
+          onClick={() => setActiveTab('curriculum')}
+          style={{ 
+            background: 'none', border: 'none', padding: '0.5rem 1rem', fontSize: '1.1rem', cursor: 'pointer',
+            color: activeTab === 'curriculum' ? 'var(--primary)' : 'var(--text-muted)',
+            borderBottom: activeTab === 'curriculum' ? '2px solid var(--primary)' : '2px solid transparent',
+            fontWeight: activeTab === 'curriculum' ? 'bold' : 'normal'
+          }}
+        >
+          Curriculum
+        </button>
+        <button 
+          onClick={() => setActiveTab('projects')}
+          style={{ 
+            background: 'none', border: 'none', padding: '0.5rem 1rem', fontSize: '1.1rem', cursor: 'pointer',
+            color: activeTab === 'projects' ? 'var(--primary)' : 'var(--text-muted)',
+            borderBottom: activeTab === 'projects' ? '2px solid var(--primary)' : '2px solid transparent',
+            fontWeight: activeTab === 'projects' ? 'bold' : 'normal'
+          }}
+        >
+          My Projects
+        </button>
+      </div>
 
-              {/* Display the module's short description text */}
-              <p>{mod.description}</p>
-
-              {/* Card footer area containing the action indicator */}
-              <div className="card-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.9rem', color: completed ? 'var(--primary)' : 'var(--text-muted)' }}>
-                  {completed ? 'Review Lesson' : 'Start Lesson'}
-                </span>
-                <span style={{ color: 'var(--primary)', transition: 'transform 0.2s', transform: 'translateX(0)' }} className="card-arrow">
-                  →
-                </span>
+      {activeTab === 'curriculum' && (
+        <div className="module-grid">
+          {curriculum.map(mod => {
+            const completed = isCompleted(mod.id);
+            return (
+              <div 
+                key={mod.id} 
+                className={`module-card glass-panel ${completed ? 'completed' : ''}`}
+                onClick={() => navigate(`/tutorial/${mod.id}`)}
+              >
+                <div className="card-header">
+                  <h3>{mod.title}</h3>
+                  {completed && <span className="status-icon">✓</span>}
+                </div>
+                <p>{mod.description}</p>
+                <div className="card-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.9rem', color: completed ? 'var(--primary)' : 'var(--text-muted)' }}>
+                    {completed ? 'Review Lesson' : 'Start Lesson'}
+                  </span>
+                  <span style={{ color: 'var(--primary)', transition: 'transform 0.2s', transform: 'translateX(0)' }} className="card-arrow">
+                    →
+                  </span>
+                </div>
               </div>
-            {/* End of module card */}
+            );
+          })}
+        </div>
+      )}
+
+      {activeTab === 'projects' && (
+        <div className="module-grid">
+          {projects.length === 0 ? (
+            <div style={{ color: 'var(--text-muted)', padding: '2rem' }}>
+              No saved projects yet. Go to the Lab to create one!
             </div>
-          );
-        })}
-      {/* End of module grid */}
-      </div>
-    {/* End of dashboard container */}
+          ) : (
+            projects.map(proj => (
+              <div 
+                key={proj._id} 
+                className="module-card glass-panel"
+                onClick={() => navigate(`/lab/sandbox?project=${proj._id}`)}
+              >
+                <div className="card-header">
+                  <h3>{proj.title}</h3>
+                </div>
+                <p>Language: {proj.language === 'cpp' ? 'C++ (QuEST)' : 'Python (Qiskit)'}</p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Saved: {new Date(proj.createdAt).toLocaleDateString()}
+                </p>
+                <div className="card-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--primary)' }}>
+                    Open Project
+                  </span>
+                  <span style={{ color: 'var(--primary)' }} className="card-arrow">→</span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }

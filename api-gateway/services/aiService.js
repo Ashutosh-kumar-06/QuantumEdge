@@ -91,4 +91,32 @@ Keep your responses helpful, beginner-friendly, under 150 words, and DO NOT give
   }
 }
 
-module.exports = { getQuantumCodeReview, getQuantumChatResponse };
+async function streamQuantumAutocomplete(codeContext, language, onChunk) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return onChunk('// GEMINI_API_KEY not configured.');
+
+  const ai = new GoogleGenAI({ apiKey });
+  const prompt = `You are a Quantum AI Pair Programmer. 
+The user is writing ${language || 'python'} code.
+Complete the code.
+DO NOT wrap your response in markdown code blocks like \`\`\`python.
+JUST output the raw text that should be appended to the current code.
+
+Current Code:
+${codeContext}`;
+
+  try {
+    const responseStream = await ai.models.generateContentStream({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+    for await (const chunk of responseStream) {
+      if (chunk.text) onChunk(chunk.text);
+    }
+  } catch (error) {
+    console.error('Gemini Stream Error:', error);
+    onChunk('\n// [AI Error: ' + error.message + ']');
+  }
+}
+
+module.exports = { getQuantumCodeReview, getQuantumChatResponse, streamQuantumAutocomplete };

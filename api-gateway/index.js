@@ -14,6 +14,8 @@ const { createServer } = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const amqp = require('amqplib');
+const { execSync } = require('child_process');
+const fs = require('fs');
 const mongoose = require('mongoose');
 const { createClient } = require('redis');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -162,6 +164,22 @@ io.on('connection', (socket) => {
     io.to(targetId).emit('new_ice_candidate', { candidate, senderId, socketId: socket.id });
   });
 
+  const { streamQuantumAutocomplete } = require('./services/aiService');
+  socket.on('ai_autocomplete_request', async ({ code, language, roomId }) => {
+    try {
+      await streamQuantumAutocomplete(code, language, (chunk) => {
+        socket.emit('ai_autocomplete_chunk', { chunk });
+        // Also emit to room if we want true pair programming for others to see the AI typing
+        if (roomId) {
+          socket.to(roomId).emit('ai_autocomplete_chunk_remote', { chunk, username: activeUsername });
+        }
+      });
+    } catch (e) {
+      console.error(e);
+      socket.emit('ai_autocomplete_chunk', { chunk: '\n// AI Error' });
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
     if (activeMeetingRoom && activeUsername) {
@@ -194,6 +212,8 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'fake-key');
 let channel = null;
 let redisClient = null;
 
+const { createAdapter } = require('@socket.io/redis-adapter');
+
 // ============================================================================
 // REDIS CONNECTION
 // ============================================================================
@@ -203,6 +223,12 @@ async function connectRedis() {
     redisClient.on('error', (err) => console.error('Redis error:', err.message));
     await redisClient.connect();
     console.log('Connected to Redis');
+
+    const pubClient = redisClient.duplicate();
+    const subClient = redisClient.duplicate();
+    await Promise.all([pubClient.connect(), subClient.connect()]);
+    io.adapter(createAdapter(pubClient, subClient));
+    console.log('Socket.io Redis Adapter configured');
   } catch (error) {
     console.error('Redis connection failed:', error.message);
     // Fail open — rate limiting will be skipped if Redis is unavailable
@@ -300,13 +326,26 @@ const defaultLimiter = rateLimit({
  */
 app.post('/api/projects', requireAuth, async (req, res) => {
   try {
-    const { title, code, language, author } = req.body;
-    if (!code) return res.status(400).json({ error: 'Code is required' });
+    const { title, code, files, language, author } = req.body;
+    if (!code && !files) return res.status(400).json({ error: 'Code or files is required' });
     
-    const project = new Project({ title, code, language, author });
+    const project = new Project({ title, code, files, language, author });
     await project.save();
     
     res.status(201).json(project);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/projects/user/:author
+ * Retrieve saved projects for a specific user
+ */
+app.get('/api/projects/user/:author', requireAuth, async (req, res) => {
+  try {
+    const projects = await Project.find({ author: req.params.author }).sort({ createdAt: -1 });
+    res.json(projects);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -538,6 +577,18 @@ app.post('/api/simulate', simulateLimiter, async (req, res) => {
     const { code, language, noiseModel } = req.body;
     if (!code) {
       return res.status(400).json({ error: 'No code provided' });
+    }
+
+    // Pre-flight Syntax Validation (<50ms)
+    if (language === 'python' || !language) {
+      try {
+        execSync('python3 -c "import ast, sys; ast.parse(sys.stdin.read())"', { input: code, stdio: 'pipe' });
+      } catch (err) {
+        let errStr = err.stderr ? err.stderr.toString() : err.message;
+        // The error comes back with the file as '<unknown>', clean it up slightly
+        errStr = errStr.replace(/<unknown>/g, 'main.py');
+        return res.status(400).json({ error: 'SyntaxError:\n' + errStr });
+      }
     }
 
     const jobId = Math.random().toString(36).substring(7);

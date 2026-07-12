@@ -8,7 +8,12 @@ const ProjectSchema = new mongoose.Schema({
   },
   code: {
     type: String,
-    required: true
+    required: false
+  },
+  files: {
+    type: Map,
+    of: String,
+    default: {}
   },
   language: {
     type: String,

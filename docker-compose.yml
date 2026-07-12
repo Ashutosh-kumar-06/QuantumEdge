@@ -113,6 +113,15 @@ services:
     networks:
       - quantum_network
 
+  # TURN Server for WebRTC corporate network bypass
+  turn-server:
+    image: coturn/coturn
+    ports:
+      - "3478:3478"
+      - "3478:3478/udp"
+    command: -n --log-file=stdout --min-port=49152 --max-port=65535 --user=quantum:edge --realm=quantumedge.local --verbose
+    networks:
+      - quantum_network
 # Define the custom network that allows all services to communicate using their names as hostnames
 networks:
   quantum_network:
