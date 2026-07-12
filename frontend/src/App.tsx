@@ -12,6 +12,7 @@ const Auth = lazy(() => import('./pages/Auth'));
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'));
 const ChatPage = lazy(() => import('./pages/ChatPage'));
 const VideoPage = lazy(() => import('./pages/VideoPage'));
+const LobbyPage = lazy(() => import('./pages/LobbyPage'));
 
 import { ProgressProvider } from './context/ProgressContext';
 
@@ -65,6 +66,12 @@ function App() {
               <li className={location.pathname === '/course_modules' ? 'active' : ''}>
                 <Link to="/course_modules">Modules</Link>
               </li>
+              <li className={location.pathname.startsWith('/chat') ? 'active' : ''}>
+                <Link to="/chat">Group Chat</Link>
+              </li>
+              <li className={location.pathname.startsWith('/video') ? 'active' : ''}>
+                <Link to="/video">Group Meet</Link>
+              </li>
               <li className={location.pathname === '/leaderboard' ? 'active' : ''}>
                 <Link to="/leaderboard">Leaderboard</Link>
               </li>
@@ -90,6 +97,8 @@ function App() {
               <Route path="/auth" element={<Auth />} />
               <Route path="/tutorial/:id" element={<Tutorial />} />
               <Route path="/lab/:id" element={<Lab />} />
+              <Route path="/chat" element={<LobbyPage type="chat" />} />
+              <Route path="/video" element={<LobbyPage type="video" />} />
               <Route path="/chat/:roomId" element={<ChatPage />} />
               <Route path="/video/:roomId" element={<VideoPage />} />
             </Routes>

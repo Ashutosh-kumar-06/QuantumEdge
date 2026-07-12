@@ -673,7 +673,7 @@ export default function Lab() {
                 <div style={{ height: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--panel-bg)', display: 'flex', flexDirection: 'column' }}>
                   {/* Output Tabs */}
                   <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid var(--border-color)' }}>
-                    {['visualizer', 'meetings', 'terminal'].map(tab => (
+                    {['visualizer', 'terminal'].map(tab => (
                       <button 
                         key={tab}
                         onClick={() => setActiveOutputTab(tab as any)}
@@ -709,34 +709,6 @@ export default function Lab() {
                       </div>
                     )}
 
-
-
-                    {/* Meetings Tab */}
-                    {activeOutputTab === 'meetings' && (
-                      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', padding: '1rem' }}>
-                        <div>
-                          <h3 style={{ color: 'var(--primary)', marginBottom: '1rem' }}>💬 Chat Meetings</h3>
-                          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                            <button onClick={() => createRoom('chat')} style={{ background: 'var(--primary)', color: '#000', border: 'none', padding: '0.6rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Create Chat Room</button>
-                            <div style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
-                              <input type="text" placeholder="Room ID" value={roomInput} onChange={e => setRoomInput(e.target.value)} style={{ flex: 1, background: '#222', color: '#fff', border: '1px solid #444', padding: '0.6rem', borderRadius: '4px' }} />
-                              <button onClick={() => joinRoom('chat')} style={{ background: '#333', color: '#fff', border: '1px solid #555', padding: '0.6rem 1.5rem', borderRadius: '4px', cursor: 'pointer' }}>Join Chat</button>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h3 style={{ color: 'var(--primary)', marginBottom: '1rem' }}>📹 Video Meetings</h3>
-                          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                            <button onClick={() => createRoom('video')} style={{ background: 'var(--primary)', color: '#000', border: 'none', padding: '0.6rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Create Video Room</button>
-                            <div style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
-                              <input type="text" placeholder="Room ID" value={roomInput} onChange={e => setRoomInput(e.target.value)} style={{ flex: 1, background: '#222', color: '#fff', border: '1px solid #444', padding: '0.6rem', borderRadius: '4px' }} />
-                              <button onClick={() => joinRoom('video')} style={{ background: '#333', color: '#fff', border: '1px solid #555', padding: '0.6rem 1.5rem', borderRadius: '4px', cursor: 'pointer' }}>Join Video</button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
 
                     {/* Terminal Tab */}
                     {activeOutputTab === 'terminal' && (
