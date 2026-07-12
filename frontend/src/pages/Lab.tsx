@@ -11,8 +11,6 @@ import '../App.css';
 import { useProgress } from '../context/ProgressContext';
 import { io } from 'socket.io-client';
 import CircuitBuilder from '../components/CircuitBuilder';
-import MultiplayerChat from '../components/MultiplayerChat';
-import MultiplayerVideoCall from '../components/MultiplayerVideoCall';
 
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
@@ -206,26 +204,23 @@ export default function Lab() {
   const [aiFeedback, setAiFeedback] = useState<string>('');
   const [language, setLanguage] = useState<'python' | 'cpp'>('python');
   const [noiseModel, setNoiseModel] = useState<'ideal' | 'depolarizing' | 'thermal'>('ideal');
-  const [activeOutputTab, setActiveOutputTab] = useState<'visualizer' | 'analytics' | 'chat' | 'video' | 'terminal'>('visualizer');
+  const [activeOutputTab, setActiveOutputTab] = useState<'visualizer' | 'meetings' | 'terminal'>('visualizer');
   
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const projectId = searchParams.get('project');
 
   // Multiplayer Room State
-  const [roomId, setRoomId] = useState<string>('');
   const [roomInput, setRoomInput] = useState<string>('');
-  
-  const currentUser = localStorage.getItem('quantumEdgeUser');
 
-  const createRoom = () => {
+  const createRoom = (type: 'chat' | 'video') => {
     const newRoomId = Math.random().toString(36).substring(2, 8);
-    setRoomId(newRoomId);
+    navigate(`/${type}/${newRoomId}`);
   };
 
-  const joinRoom = () => {
+  const joinRoom = (type: 'chat' | 'video') => {
     if (roomInput.trim()) {
-      setRoomId(roomInput.trim());
+      navigate(`/${type}/${roomInput.trim()}`);
     }
   };
 
@@ -504,7 +499,7 @@ export default function Lab() {
                       <CircuitBuilder 
                         onCodeGenerated={setCode} 
                         socket={socket}
-                        roomId={roomId}
+                        roomId={module.id}
                         username={localStorage.getItem('quantumEdgeUser') || `User_${Math.floor(Math.random()*1000)}`}
                       />
                     </div>
@@ -516,7 +511,7 @@ export default function Lab() {
                 <div style={{ height: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--panel-bg)', display: 'flex', flexDirection: 'column' }}>
                   {/* Output Tabs */}
                   <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid var(--border-color)' }}>
-                    {['visualizer', 'chat', 'video', 'terminal'].map(tab => (
+                    {['visualizer', 'meetings', 'terminal'].map(tab => (
                       <button 
                         key={tab}
                         onClick={() => setActiveOutputTab(tab as any)}
@@ -554,61 +549,30 @@ export default function Lab() {
 
 
 
-                    {/* Chat Tab */}
-                    {activeOutputTab === 'chat' && (
-                      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        {!currentUser ? (
-                          <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', color: '#888' }}>
-                            Please sign in to use Multiplayer Chat.
+                    {/* Meetings Tab */}
+                    {activeOutputTab === 'meetings' && (
+                      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', padding: '1rem' }}>
+                        <div>
+                          <h3 style={{ color: 'var(--primary)', marginBottom: '1rem' }}>💬 Chat Meetings</h3>
+                          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                            <button onClick={() => createRoom('chat')} style={{ background: 'var(--primary)', color: '#000', border: 'none', padding: '0.6rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Create Chat Room</button>
+                            <div style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
+                              <input type="text" placeholder="Room ID" value={roomInput} onChange={e => setRoomInput(e.target.value)} style={{ flex: 1, background: '#222', color: '#fff', border: '1px solid #444', padding: '0.6rem', borderRadius: '4px' }} />
+                              <button onClick={() => joinRoom('chat')} style={{ background: '#333', color: '#fff', border: '1px solid #555', padding: '0.6rem 1.5rem', borderRadius: '4px', cursor: 'pointer' }}>Join Chat</button>
+                            </div>
                           </div>
-                        ) : (
-                          <>
-                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                              <button onClick={createRoom} style={{ background: 'var(--primary)', color: '#000', border: 'none', padding: '0.4rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Create Meeting</button>
-                              <div style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
-                                <input type="text" placeholder="Room ID" value={roomInput} onChange={e => setRoomInput(e.target.value)} style={{ flex: 1, background: '#222', color: '#fff', border: '1px solid #444', padding: '0.4rem', borderRadius: '4px' }} />
-                                <button onClick={joinRoom} style={{ background: '#333', color: '#fff', border: '1px solid #555', padding: '0.4rem 1rem', borderRadius: '4px', cursor: 'pointer' }}>Join</button>
-                              </div>
-                            </div>
-                            <div style={{ flex: 1, overflow: 'hidden' }}>
-                              <MultiplayerChat 
-                                socket={socket} 
-                                username={JSON.parse(currentUser).email}
-                                defaultRoom={module.id} 
-                                roomId={roomId || module.id}
-                                setRoomId={setRoomId}
-                              />
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )}
+                        </div>
 
-                    {/* Video Tab */}
-                    {activeOutputTab === 'video' && (
-                      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        {!currentUser ? (
-                          <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', color: '#888' }}>
-                            Please sign in to use Multiplayer Video Call.
+                        <div>
+                          <h3 style={{ color: 'var(--primary)', marginBottom: '1rem' }}>📹 Video Meetings</h3>
+                          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                            <button onClick={() => createRoom('video')} style={{ background: 'var(--primary)', color: '#000', border: 'none', padding: '0.6rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Create Video Room</button>
+                            <div style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
+                              <input type="text" placeholder="Room ID" value={roomInput} onChange={e => setRoomInput(e.target.value)} style={{ flex: 1, background: '#222', color: '#fff', border: '1px solid #444', padding: '0.6rem', borderRadius: '4px' }} />
+                              <button onClick={() => joinRoom('video')} style={{ background: '#333', color: '#fff', border: '1px solid #555', padding: '0.6rem 1.5rem', borderRadius: '4px', cursor: 'pointer' }}>Join Video</button>
+                            </div>
                           </div>
-                        ) : (
-                          <>
-                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                              <button onClick={createRoom} style={{ background: 'var(--primary)', color: '#000', border: 'none', padding: '0.4rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Create Meeting</button>
-                              <div style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
-                                <input type="text" placeholder="Room ID" value={roomInput} onChange={e => setRoomInput(e.target.value)} style={{ flex: 1, background: '#222', color: '#fff', border: '1px solid #444', padding: '0.4rem', borderRadius: '4px' }} />
-                                <button onClick={joinRoom} style={{ background: '#333', color: '#fff', border: '1px solid #555', padding: '0.4rem 1rem', borderRadius: '4px', cursor: 'pointer' }}>Join</button>
-                              </div>
-                            </div>
-                            <div style={{ flex: 1, overflow: 'hidden' }}>
-                              <MultiplayerVideoCall 
-                                socket={socket} 
-                                roomId={roomId || module.id}
-                                username={JSON.parse(currentUser).email}
-                              />
-                            </div>
-                          </>
-                        )}
+                        </div>
                       </div>
                     )}
 

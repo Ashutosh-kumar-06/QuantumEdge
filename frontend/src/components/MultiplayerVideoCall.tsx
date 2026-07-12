@@ -5,13 +5,15 @@ interface MultiplayerVideoCallProps {
   socket: Socket;
   roomId: string;
   username: string;
+  canMic?: boolean;
+  canCam?: boolean;
 }
 
 interface PeerConnectionMap {
   [socketId: string]: RTCPeerConnection;
 }
 
-export default function MultiplayerVideoCall({ socket, roomId, username }: MultiplayerVideoCallProps) {
+export default function MultiplayerVideoCall({ socket, roomId, username, canMic = true, canCam = true }: MultiplayerVideoCallProps) {
   const [videoEnabled, setVideoEnabled] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
@@ -167,6 +169,7 @@ export default function MultiplayerVideoCall({ socket, roomId, username }: Multi
   };
 
   const toggleMic = () => {
+    if (!canMic) return;
     if (localStreamRef.current) {
       const audioTrack = localStreamRef.current.getAudioTracks()[0];
       if (audioTrack) {
@@ -177,6 +180,7 @@ export default function MultiplayerVideoCall({ socket, roomId, username }: Multi
   };
 
   const toggleCamera = () => {
+    if (!canCam) return;
     if (localStreamRef.current && !isScreenSharing) {
       const videoTrack = localStreamRef.current.getVideoTracks()[0];
       if (videoTrack) {
@@ -306,7 +310,7 @@ export default function MultiplayerVideoCall({ socket, roomId, username }: Multi
           <div style={{ padding: '1rem', background: '#181820', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'center', gap: '1.5rem', alignItems: 'center' }}>
             
             {/* Mute Mic */}
-            <button onClick={toggleMic} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', background: 'transparent', border: 'none', color: audioEnabled ? '#fff' : '#ff6b6b', cursor: 'pointer', transition: 'transform 0.1s' }} onMouseDown={e => e.currentTarget.style.transform = 'scale(0.9)'} onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}>
+            <button onClick={toggleMic} disabled={!canMic} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', background: 'transparent', border: 'none', color: audioEnabled ? '#fff' : '#ff6b6b', cursor: canMic ? 'pointer' : 'not-allowed', opacity: canMic ? 1 : 0.5, transition: 'transform 0.1s' }} onMouseDown={e => { if(canMic) e.currentTarget.style.transform = 'scale(0.9)'; }} onMouseUp={e => { if(canMic) e.currentTarget.style.transform = 'scale(1)'; }}>
               <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: audioEnabled ? 'rgba(255,255,255,0.1)' : 'rgba(255, 107, 107, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>
                 {audioEnabled ? '🎤' : '🔇'}
               </div>
@@ -314,7 +318,7 @@ export default function MultiplayerVideoCall({ socket, roomId, username }: Multi
             </button>
 
             {/* Stop Camera */}
-            <button onClick={toggleCamera} disabled={isScreenSharing} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', background: 'transparent', border: 'none', color: cameraEnabled ? '#fff' : '#ff6b6b', cursor: isScreenSharing ? 'not-allowed' : 'pointer', opacity: isScreenSharing ? 0.5 : 1, transition: 'transform 0.1s' }} onMouseDown={e => { if(!isScreenSharing) e.currentTarget.style.transform = 'scale(0.9)'; }} onMouseUp={e => { if(!isScreenSharing) e.currentTarget.style.transform = 'scale(1)'; }}>
+            <button onClick={toggleCamera} disabled={!canCam || isScreenSharing} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', background: 'transparent', border: 'none', color: cameraEnabled ? '#fff' : '#ff6b6b', cursor: (!canCam || isScreenSharing) ? 'not-allowed' : 'pointer', opacity: (!canCam || isScreenSharing) ? 0.5 : 1, transition: 'transform 0.1s' }} onMouseDown={e => { if(canCam && !isScreenSharing) e.currentTarget.style.transform = 'scale(0.9)'; }} onMouseUp={e => { if(canCam && !isScreenSharing) e.currentTarget.style.transform = 'scale(1)'; }}>
               <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: cameraEnabled ? 'rgba(255,255,255,0.1)' : 'rgba(255, 107, 107, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>
                 {cameraEnabled ? '📷' : '🚫'}
               </div>

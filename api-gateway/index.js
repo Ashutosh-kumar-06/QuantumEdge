@@ -39,9 +39,16 @@ const io = new Server(httpServer, {
 app.use(cors());
 app.use(express.json());
 
+// Meeting Rooms State
+const meetingRooms = {};
+
 // Socket.io connections for Multiplayer, Chat, and WebRTC
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
+  
+  // Track user's active meeting room to clean up on disconnect
+  let activeMeetingRoom = null;
+  let activeUsername = null;
 
   socket.on('subscribe_job', (jobId) => {
     socket.join(jobId);
@@ -69,6 +76,45 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('circuit_update', { username, moments });
   });
 
+  // Shared Code Editor Sync
+  socket.on('code_update', ({ roomId, code }) => {
+    socket.to(roomId).emit('code_update', { code });
+  });
+
+  // Dedicated Meeting Rooms (Chat & Video) Role-Based Access Control
+  socket.on('join_meeting', ({ roomId, username }) => {
+    socket.join(roomId);
+    activeMeetingRoom = roomId;
+    activeUsername = username;
+
+    if (!meetingRooms[roomId]) {
+      // First person to join is the owner
+      meetingRooms[roomId] = {
+        owner: username,
+        participants: {}
+      };
+    } else {
+      // Add as participant with default false permissions
+      if (meetingRooms[roomId].owner !== username) {
+        meetingRooms[roomId].participants[username] = {
+          canEdit: false,
+          canMic: false,
+          canCam: false
+        };
+      }
+    }
+
+    io.to(roomId).emit('room_state', meetingRooms[roomId]);
+  });
+
+  socket.on('update_permissions', ({ roomId, targetUsername, permissions }) => {
+    const room = meetingRooms[roomId];
+    if (room && room.participants[targetUsername]) {
+      room.participants[targetUsername] = { ...room.participants[targetUsername], ...permissions };
+      io.to(roomId).emit('room_state', room);
+    }
+  });
+
   // WebRTC Mesh Signaling
   socket.on('join_video_room', ({ roomId, username }) => {
     socket.to(roomId).emit('user_joined_video', { username, socketId: socket.id });
@@ -92,6 +138,20 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
+    if (activeMeetingRoom && activeUsername) {
+      const room = meetingRooms[activeMeetingRoom];
+      if (room) {
+        if (room.owner === activeUsername) {
+          // If owner leaves, maybe assign a new owner or delete room?
+          // For simplicity, we just delete the room state if owner leaves.
+          delete meetingRooms[activeMeetingRoom];
+          io.to(activeMeetingRoom).emit('room_ended');
+        } else {
+          delete room.participants[activeUsername];
+          io.to(activeMeetingRoom).emit('room_state', room);
+        }
+      }
+    }
   });
 });
 

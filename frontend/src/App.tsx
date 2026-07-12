@@ -10,6 +10,8 @@ import Tutorial from './pages/Tutorial';
 import Lab from './pages/Lab';
 import Auth from './pages/Auth';
 import LeaderboardPage from './pages/LeaderboardPage';
+import ChatPage from './pages/ChatPage';
+import VideoPage from './pages/VideoPage';
 
 import { ProgressProvider } from './context/ProgressContext';
 
@@ -87,6 +89,8 @@ function App() {
             <Route path="/auth" element={<Auth />} />
             <Route path="/tutorial/:id" element={<Tutorial />} />
             <Route path="/lab/:id" element={<Lab />} />
+            <Route path="/chat/:roomId" element={<ChatPage />} />
+            <Route path="/video/:roomId" element={<VideoPage />} />
           </Routes>
         </main>
       </div>
