@@ -101,19 +101,14 @@ export default function Dashboard() {
               {/* Display the module's short description text */}
               <p>{mod.description}</p>
 
-              {/* Card footer area containing the action button */}
-              <div className="card-footer">
-                {/* Button that navigates to the tutorial page when clicked.
-                    e.stopPropagation() prevents the card's onClick from also firing
-                    (since the button is inside the card, both clicks would trigger otherwise).
-                    Shows "Review" if completed, or "Start Lesson" if not yet done. */}
-                <button className="start-btn" onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/tutorial/${mod.id}`);
-                }}>
-                  {completed ? 'Review' : 'Start Lesson'}
-                </button>
-              {/* End of card footer */}
+              {/* Card footer area containing the action indicator */}
+              <div className="card-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.9rem', color: completed ? 'var(--primary)' : 'var(--text-muted)' }}>
+                  {completed ? 'Review Lesson' : 'Start Lesson'}
+                </span>
+                <span style={{ color: 'var(--primary)', transition: 'transform 0.2s', transform: 'translateX(0)' }} className="card-arrow">
+                  →
+                </span>
               </div>
             {/* End of module card */}
             </div>

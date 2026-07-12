@@ -336,131 +336,159 @@ function BlochSphereSimulator({ initialState }: { initialState: string }) {
  * The gates are provided as a comma-separated string (e.g., "H,X,M").
  */
 export function CircuitDemoSimulator({ gates }: { gates: string }) {
-  // Parse the comma-separated gates string into an array of individual gate names.
-  // If no gates string is provided, default to ['H', 'X', 'M'] (Hadamard, X, Measure).
   const gateArray = (gates || 'H,X,M').split(',');
-
-  // 'activeGate' tracks which gate is currently highlighted/active (-1 means none).
-  // This index determines where the "photon" dot appears on the circuit wire.
   const [activeGate, setActiveGate] = useState(-1);
-
-  // 'isPlaying' tracks whether the automatic step-through animation is running.
-  // When true, the circuit automatically advances through gates one per second.
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // useEffect manages the auto-play animation timer.
-  // When isPlaying is true, it sets up an interval that advances the active gate
-  // every 1000ms (1 second). When isPlaying becomes false, it cleans up the interval.
   useEffect(() => {
-    // Variable to hold the interval timer ID (so we can clear it later)
     let interval: any;
-
-    // Only start the animation timer if isPlaying is true
     if (isPlaying) {
-      // Set up a repeating timer that fires every 1000ms
       interval = setInterval(() => {
-        // Advance to the next gate using the functional updater form of setState
         setActiveGate(prev => {
-          // If we've gone past the last gate, stop playing and reset
           if (prev >= gateArray.length) {
-            // Stop the auto-play animation
             setIsPlaying(false);
-            // Reset back to "no gate selected" state
             return -1;
           }
-          // Otherwise, move to the next gate (increment by 1)
           return prev + 1;
         });
-      }, 1000); // Advance every 1 second
+      }, 1000);
     }
-
-    // Cleanup function — React calls this when the component unmounts or when
-    // the dependencies change. It clears the interval to prevent memory leaks.
     return () => clearInterval(interval);
-  }, [isPlaying, gateArray.length]); // Re-run when play state or gate count changes
+  }, [isPlaying, gateArray.length]);
 
-  // Render the circuit demo visualization
+  // --- Quantum State Math Engine ---
+  let alpha = { re: 1, im: 0 };
+  let beta = { re: 0, im: 0 };
+
+  const applyMatrix = (a: any, b: any, m00: any, m01: any, m10: any, m11: any) => {
+    const newA_re = m00.re * a.re - m00.im * a.im + m01.re * b.re - m01.im * b.im;
+    const newA_im = m00.re * a.im + m00.im * a.re + m01.re * b.im + m01.im * b.re;
+    
+    const newB_re = m10.re * a.re - m10.im * a.im + m11.re * b.re - m11.im * b.im;
+    const newB_im = m10.re * a.im + m10.im * a.re + m11.re * b.im + m11.im * b.re;
+    
+    return [{re: newA_re, im: newA_im}, {re: newB_re, im: newB_im}];
+  };
+
+  const invSqrt2 = 1 / Math.sqrt(2);
+  
+  for (let i = 0; i <= activeGate && i < gateArray.length; i++) {
+    const gate = gateArray[i].trim().toUpperCase();
+    if (gate === 'H') {
+      [alpha, beta] = applyMatrix(alpha, beta, 
+        {re: invSqrt2, im: 0}, {re: invSqrt2, im: 0}, 
+        {re: invSqrt2, im: 0}, {re: -invSqrt2, im: 0}
+      );
+    } else if (gate === 'X') {
+      [alpha, beta] = applyMatrix(alpha, beta, 
+        {re: 0, im: 0}, {re: 1, im: 0}, 
+        {re: 1, im: 0}, {re: 0, im: 0}
+      );
+    } else if (gate === 'Y') {
+      [alpha, beta] = applyMatrix(alpha, beta, 
+        {re: 0, im: 0}, {re: 0, im: -1}, 
+        {re: 0, im: 1}, {re: 0, im: 0}
+      );
+    } else if (gate === 'Z') {
+      [alpha, beta] = applyMatrix(alpha, beta, 
+        {re: 1, im: 0}, {re: 0, im: 0}, 
+        {re: 0, im: 0}, {re: -1, im: 0}
+      );
+    } else if (gate === 'S') {
+      [alpha, beta] = applyMatrix(alpha, beta, 
+        {re: 1, im: 0}, {re: 0, im: 0}, 
+        {re: 0, im: 0}, {re: 0, im: 1}
+      );
+    } else if (gate === 'T') {
+      [alpha, beta] = applyMatrix(alpha, beta, 
+        {re: 1, im: 0}, {re: 0, im: 0}, 
+        {re: 0, im: 0}, {re: Math.cos(Math.PI/4), im: Math.sin(Math.PI/4)}
+      );
+    }
+  }
+
+  const p0 = (alpha.re * alpha.re + alpha.im * alpha.im);
+  const p1 = (beta.re * beta.re + beta.im * beta.im);
+  
+  // Format complex number for display
+  const formatComplex = (c: any) => {
+    if (Math.abs(c.re) < 0.01 && Math.abs(c.im) < 0.01) return "0";
+    let res = "";
+    if (Math.abs(c.re) >= 0.01) res += c.re.toFixed(2);
+    if (Math.abs(c.im) >= 0.01) {
+      if (c.im > 0 && res !== "") res += " + ";
+      else if (c.im < 0) res += " - ";
+      res += Math.abs(c.im).toFixed(2) + "i";
+    }
+    return res === "" ? "0" : res;
+  };
+
   return (
-    // Outer container for the circuit simulator widget
     <div className="mini-simulator circuit-simulator">
-      {/* Header area with the widget title */}
       <div className="bloch-meta">
-        {/* Title describing what this interactive widget does */}
         <h4>Interactive Circuit Execution</h4>
-      {/* End of header */}
+        <span className="badge">State Engine</span>
       </div>
       
-      {/* The circuit wire area — a horizontally scrolling container with flexbox layout */}
       <div className="circuit-wire-container" style={{ 
-        position: 'relative', 
-        width: '100%', 
-        height: '80px', 
-        borderBottom: '2px solid rgba(255,255,255,0.2)', 
-        marginBottom: '1rem',
-        display: 'flex',
-        alignItems: 'center',
-        overflowX: 'auto',
-        overflowY: 'hidden',
-        paddingLeft: '1rem',
-        paddingRight: '1rem',
-        gap: '2rem'
+        position: 'relative', width: '100%', height: '80px', borderBottom: '2px solid rgba(255,255,255,0.2)', marginBottom: '1rem',
+        display: 'flex', alignItems: 'center', overflowX: 'auto', overflowY: 'hidden', paddingLeft: '1rem', paddingRight: '1rem', gap: '2rem'
       }}>
-        {/* Label at the start of the wire showing the initial qubit state |0⟩ */}
         <div className="wire-label" style={{ fontWeight: 'bold', marginRight: '1rem' }}>|0⟩</div>
         
-        {/* Render each gate as a box along the wire */}
         {gateArray.map((gate, idx) => (
           <div 
             key={idx} 
             className={`circuit-gate ${activeGate === idx ? 'active-pulse' : ''}`}
             onClick={() => setActiveGate(idx)}
             style={{ 
-              position: 'relative',
-              flexShrink: 0,
-              padding: '0.4rem 1rem',
-              background: 'rgba(69, 243, 255, 0.1)',
-              border: `1px solid ${activeGate === idx ? '#fff' : 'var(--primary-color, #45f3ff)'}`,
-              borderRadius: '4px',
-              cursor: 'pointer',
-              transition: 'all 0.3s'
+              position: 'relative', flexShrink: 0, padding: '0.4rem 1rem', background: 'rgba(69, 243, 255, 0.1)',
+              border: `1px solid ${activeGate === idx ? '#fff' : 'var(--primary-color, #45f3ff)'}`, borderRadius: '4px', cursor: 'pointer', transition: 'all 0.3s'
             }}
           >
             {gate}
-            {/* The "photon" indicator */}
             {activeGate === idx && (
               <div 
                 className="photon-pulse" 
-                style={{ 
-                  position: 'absolute',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  top: '110%',
-                  width: '10px',
-                  height: '10px',
-                  background: '#00ff88',
-                  borderRadius: '50%',
-                  boxShadow: '0 0 10px #00ff88'
-                }}
+                style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: '110%', width: '10px', height: '10px', background: '#00ff88', borderRadius: '50%', boxShadow: '0 0 10px #00ff88' }}
               ></div>
             )}
           </div>
         ))}
       </div>
 
-      {/* Playback control buttons for the circuit animation */}
-      <div className="simulator-controls" style={{ display: 'flex', gap: '0.5rem' }}>
-        {/* Play button — starts the auto-advancing animation. Disabled while already playing. */}
-        <button className="gate-btn" onClick={() => setIsPlaying(true)} disabled={isPlaying}>Play</button>
-        {/* Pause button — stops the animation. Disabled when not currently playing. */}
-        <button className="gate-btn" onClick={() => setIsPlaying(false)} disabled={!isPlaying}>Pause</button>
-        {/* Reset button — clears the active gate selection, returning to initial state. */}
-        <button className="gate-btn reset-btn" onClick={() => setActiveGate(-1)}>Reset</button>
-      {/* End of simulator controls */}
+      <div style={{ padding: '1rem', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', marginBottom: '1rem', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+        <div>
+          <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '0.3rem' }}>State Vector</div>
+          <div style={{ fontFamily: 'monospace', fontSize: '1.1rem' }}>
+            [ {formatComplex(alpha)}, <br/>  {formatComplex(beta)} ]
+          </div>
+        </div>
+        <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)', height: '50px' }}></div>
+        <div>
+          <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '0.3rem' }}>Probabilities</div>
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ height: '40px', width: '20px', background: 'rgba(255,255,255,0.1)', margin: '0 auto', display: 'flex', alignItems: 'flex-end', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ width: '100%', height: `${p0 * 100}%`, background: 'var(--primary-color)', transition: 'height 0.3s' }}></div>
+              </div>
+              <div style={{ fontSize: '0.75rem', marginTop: '4px' }}>|0⟩ {Math.round(p0 * 100)}%</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ height: '40px', width: '20px', background: 'rgba(255,255,255,0.1)', margin: '0 auto', display: 'flex', alignItems: 'flex-end', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ width: '100%', height: `${p1 * 100}%`, background: 'var(--success-color)', transition: 'height 0.3s' }}></div>
+              </div>
+              <div style={{ fontSize: '0.75rem', marginTop: '4px' }}>|1⟩ {Math.round(p1 * 100)}%</div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Instructional caption explaining how to use the widget */}
-      <p className="caption">Click "Play" or click on individual gates to step through the execution.</p>
-    {/* End of circuit simulator */}
+      <div className="simulator-controls" style={{ display: 'flex', gap: '0.5rem' }}>
+        <button className="gate-btn" onClick={() => setIsPlaying(true)} disabled={isPlaying}>Play</button>
+        <button className="gate-btn" onClick={() => setIsPlaying(false)} disabled={!isPlaying}>Pause</button>
+        <button className="gate-btn reset-btn" onClick={() => setActiveGate(-1)}>Reset</button>
+      </div>
     </div>
   );
 }

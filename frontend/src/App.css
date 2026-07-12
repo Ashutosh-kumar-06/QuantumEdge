@@ -355,6 +355,10 @@ nav ul li.active a, nav ul li.active span {
   border-color: rgba(69, 243, 255, 0.3);
 }
 
+.module-card:hover .card-arrow {
+  transform: translateX(5px) !important;
+}
+
 /* 
  * Locked Module Card — A module that the user hasn't unlocked yet.
  * Appears faded and grayed-out to indicate it's not accessible.
