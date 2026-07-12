@@ -12,6 +12,7 @@ import { useProgress } from '../context/ProgressContext';
 import { io } from 'socket.io-client';
 import CircuitBuilder from '../components/CircuitBuilder';
 import AiTutorChat from '../components/AiTutorChat';
+import { auth } from '../firebase';
 
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
@@ -299,9 +300,18 @@ export default function Lab() {
     try {
       const userStr = localStorage.getItem('quantumEdgeUser');
       const author = userStr ? JSON.parse(userStr).email : 'Anonymous';
+      
+      let token = '';
+      if (auth.currentUser) {
+        token = await auth.currentUser.getIdToken();
+      }
+
       const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/projects`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ 
           title: module?.title || 'Sandbox Project', 
           code, 
@@ -386,9 +396,17 @@ export default function Lab() {
     setReviewLoading(true);
     setIsAiChatOpen(true);
     try {
+      let token = '';
+      if (auth.currentUser) {
+        token = await auth.currentUser.getIdToken();
+      }
+
       const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/review`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ code, actualErrorOrOutput: output })
       });
       const data = await response.json();

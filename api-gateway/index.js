@@ -25,7 +25,8 @@ const Job = require('./models/Job');
 const Project = require('./models/Project');
 
 // Middleware
-const { createRateLimiter } = require('./middleware/rateLimiter');
+const { requireAuth } = require('./middleware/auth');
+const rateLimit = require('express-rate-limit');
 const { parsePagination, buildPaginationMeta } = require('./middleware/paginate');
 
 // Initialize Express & Socket.io
@@ -237,45 +238,32 @@ async function connectDB() {
 // RATE LIMITERS (applied per-route with different thresholds)
 // ============================================================================
 
-// Lazy-init rate limiters after Redis connects
-function getRateLimiters() {
-  return {
-    // Heavy endpoints — strict limits
-    simulate: createRateLimiter(redisClient, {
-      windowMs: 60 * 1000,
-      max: 10,
-      keyPrefix: 'rl:simulate',
-      message: 'Simulation rate limit exceeded. Max 10 requests per minute.',
-    }),
-    review: createRateLimiter(redisClient, {
-      windowMs: 60 * 1000,
-      max: 5,
-      keyPrefix: 'rl:review',
-      message: 'AI review rate limit exceeded. Max 5 requests per minute.',
-    }),
-    // Read endpoints — generous limits
-    curriculum: createRateLimiter(redisClient, {
-      windowMs: 60 * 1000,
-      max: 60,
-      keyPrefix: 'rl:curriculum',
-    }),
-    jobPoll: createRateLimiter(redisClient, {
-      windowMs: 60 * 1000,
-      max: 120,
-      keyPrefix: 'rl:jobpoll',
-    }),
-    progress: createRateLimiter(redisClient, {
-      windowMs: 60 * 1000,
-      max: 30,
-      keyPrefix: 'rl:progress',
-    }),
-    jobsList: createRateLimiter(redisClient, {
-      windowMs: 60 * 1000,
-      max: 30,
-      keyPrefix: 'rl:jobslist',
-    }),
-  };
-}
+// ============================================================================
+// RATE LIMITERS (using express-rate-limit)
+// ============================================================================
+
+const simulateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { error: 'Simulation rate limit exceeded. Max 10 requests per minute.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const reviewLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { error: 'AI review rate limit exceeded. Max 5 requests per minute.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const defaultLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // ============================================================================
 // API ENDPOINTS
@@ -285,7 +273,7 @@ function getRateLimiters() {
  * POST /api/projects
  * Save a new cloud project
  */
-app.post('/api/projects', async (req, res) => {
+app.post('/api/projects', requireAuth, async (req, res) => {
   try {
     const { title, code, language, author } = req.body;
     if (!code) return res.status(400).json({ error: 'Code is required' });
@@ -322,9 +310,7 @@ app.get('/api/projects/:id', async (req, res) => {
 app.get('/api/curriculum', async (req, res) => {
   try {
     // Apply rate limiting
-    const rl = getRateLimiters();
-    await new Promise((resolve) => rl.curriculum(req, res, resolve));
-    if (res.headersSent) return; // 429 was already sent
+    defaultLimiter(req, res, () => {});
 
     const cacheKey = `curriculum:${req.query.page || 'all'}:${req.query.limit || 'all'}`;
     
@@ -372,9 +358,7 @@ app.get('/api/curriculum', async (req, res) => {
  */
 app.get('/api/progress/:username', async (req, res) => {
   try {
-    const rl = getRateLimiters();
-    await new Promise((resolve) => rl.progress(req, res, resolve));
-    if (res.headersSent) return;
+    defaultLimiter(req, res, () => {});
 
     const user = await User.findOne({ username: req.params.username });
     res.json(user ? user.progress : []);
@@ -389,9 +373,7 @@ app.get('/api/progress/:username', async (req, res) => {
  */
 app.post('/api/progress/:username', async (req, res) => {
   try {
-    const rl = getRateLimiters();
-    await new Promise((resolve) => rl.progress(req, res, resolve));
-    if (res.headersSent) return;
+    defaultLimiter(req, res, () => {});
 
     const { moduleId, completed } = req.body;
     let user = await User.findOne({ username: req.params.username });
@@ -424,9 +406,7 @@ app.post('/api/progress/:username', async (req, res) => {
  */
 app.get('/api/leaderboard', async (req, res) => {
   try {
-    const rl = getRateLimiters();
-    await new Promise((resolve) => rl.progress(req, res, resolve));
-    if (res.headersSent) return;
+    defaultLimiter(req, res, () => {});
 
     const topUsers = await User.find().sort({ xp: -1 }).limit(10).select('username xp avatar -_id');
     res.json(topUsers);
@@ -442,12 +422,8 @@ const { getQuantumCodeReview } = require('./services/aiService');
  * Sends user code to an AI model for code review.
  * Rate limited: 5 requests/minute per IP.
  */
-app.post('/api/review', async (req, res) => {
+app.post('/api/review', requireAuth, reviewLimiter, async (req, res) => {
   try {
-    const rl = getRateLimiters();
-    await new Promise((resolve) => rl.review(req, res, resolve));
-    if (res.headersSent) return;
-
     const { code, expectedOutput, actualErrorOrOutput } = req.body;
     
     // Check if any API key is configured (handled in the service, but we catch gracefully here too)
@@ -470,12 +446,8 @@ app.post('/api/review', async (req, res) => {
  * Creates a simulation job and puts it in the RabbitMQ queue.
  * Rate limited: 10 requests/minute per IP.
  */
-app.post('/api/simulate', async (req, res) => {
+app.post('/api/simulate', simulateLimiter, async (req, res) => {
   try {
-    const rl = getRateLimiters();
-    await new Promise((resolve) => rl.simulate(req, res, resolve));
-    if (res.headersSent) return;
-
     const { code, language, noiseModel } = req.body;
     if (!code) {
       return res.status(400).json({ error: 'No code provided' });
@@ -504,9 +476,7 @@ app.post('/api/simulate', async (req, res) => {
  */
 app.get('/api/job/:jobId', async (req, res) => {
   try {
-    const rl = getRateLimiters();
-    await new Promise((resolve) => rl.jobPoll(req, res, resolve));
-    if (res.headersSent) return;
+    defaultLimiter(req, res, () => {});
 
     const job = await Job.findOne({ jobId: req.params.jobId });
     if (!job) return res.status(404).json({ error: 'Job not found' });
@@ -526,9 +496,7 @@ app.get('/api/job/:jobId', async (req, res) => {
  */
 app.get('/api/jobs', async (req, res) => {
   try {
-    const rl = getRateLimiters();
-    await new Promise((resolve) => rl.jobsList(req, res, resolve));
-    if (res.headersSent) return;
+    defaultLimiter(req, res, () => {});
 
     const { page, limit, skip } = parsePagination(req.query);
 
