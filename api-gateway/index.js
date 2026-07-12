@@ -408,7 +408,23 @@ app.get('/api/leaderboard', async (req, res) => {
   try {
     defaultLimiter(req, res, () => {});
 
+    const cacheKey = 'leaderboard:top10';
+    
+    // 1. Check Redis Cache
+    if (redisClient && redisClient.isOpen) {
+      const cachedData = await redisClient.get(cacheKey);
+      if (cachedData) {
+        return res.json(JSON.parse(cachedData));
+      }
+    }
+
     const topUsers = await User.find().sort({ xp: -1 }).limit(10).select('username xp avatar -_id');
+    
+    // 2. Save to Redis Cache (expire in 300 seconds = 5 minutes)
+    if (redisClient && redisClient.isOpen) {
+      await redisClient.setEx(cacheKey, 300, JSON.stringify(topUsers));
+    }
+
     res.json(topUsers);
   } catch (e) {
     res.status(500).json({ error: e.message });
