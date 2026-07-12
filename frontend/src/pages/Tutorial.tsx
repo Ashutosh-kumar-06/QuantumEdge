@@ -123,7 +123,7 @@ export default function Tutorial() {
       {/* Tutorial header section with a back button, title, and metadata */}
       <div className="tutorial-header glass-header">
         {/* Back button — clicking it navigates the user back to the Lab */}
-        <button className="back-btn" onClick={() => navigate(`/`)}>← Back</button>
+        <button className="back-btn" onClick={() => navigate(`/dashboard`)}>← Back</button>
 
         {/* Display the module's title as a large heading */}
         <h1>{module.title}</h1>

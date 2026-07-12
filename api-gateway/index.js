@@ -576,9 +576,13 @@ app.get('/health', (req, res) => res.json({
 // ============================================================================
 // SERVER STARTUP
 // ============================================================================
-httpServer.listen(PORT, async () => {
-  console.log(`API Gateway & WebSocket server running on port ${PORT}`);
-  await connectDB();
-  await connectRedis();
-  await connectQueue();
-});
+if (require.main === module) {
+  httpServer.listen(PORT, async () => {
+    console.log(`API Gateway & WebSocket server running on port ${PORT}`);
+    await connectDB();
+    await connectRedis();
+    await connectQueue();
+  });
+}
+
+module.exports = { app, httpServer };

@@ -2,13 +2,14 @@
 // App.tsx — Root Application Component
 // ============================================================================
 
-import { Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
 import Dashboard from './pages/Dashboard';
 import Tutorial from './pages/Tutorial';
 import Lab from './pages/Lab';
 import Auth from './pages/Auth';
+import LandingPage from './pages/LandingPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import ChatPage from './pages/ChatPage';
 import VideoPage from './pages/VideoPage';
@@ -59,11 +60,11 @@ function App() {
           <h1>QuantumEdge <span className="badge">PRO</span></h1>
           <nav>
             <ul>
-              <li className={location.pathname.startsWith('/lab') || location.pathname === '/' ? 'active' : ''}>
+              <li className={location.pathname.startsWith('/lab') ? 'active' : ''}>
                 <Link to="/lab/sandbox">Lab</Link>
               </li>
-              <li className={location.pathname === '/modules' ? 'active' : ''}>
-                <Link to="/modules">Modules</Link>
+              <li className={location.pathname === '/dashboard' ? 'active' : ''}>
+                <Link to="/dashboard">Modules</Link>
               </li>
               <li className={location.pathname === '/leaderboard' ? 'active' : ''}>
                 <Link to="/leaderboard">Leaderboard</Link>
@@ -83,8 +84,8 @@ function App() {
         
         <main className="main-content">
           <Routes>
-            <Route path="/" element={<Navigate to="/lab/sandbox" replace />} />
-            <Route path="/modules" element={<Dashboard />} />
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/tutorial/:id" element={<Tutorial />} />

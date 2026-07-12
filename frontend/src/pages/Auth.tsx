@@ -16,6 +16,12 @@ export default function Auth() {
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    if (!auth) {
+      setError('Firebase configuration is missing! Make sure your keys in frontend/.env start with VITE_ (e.g., VITE_FIREBASE_API_KEY).');
+      return;
+    }
+
     try {
       if (mode === 'signup') {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -33,6 +39,12 @@ export default function Auth() {
 
   const handleOAuth = async (provider: string) => {
     setError('');
+
+    if (!auth) {
+      setError('Firebase configuration is missing! Make sure your keys in frontend/.env start with VITE_ (e.g., VITE_FIREBASE_API_KEY).');
+      return;
+    }
+
     try {
       if (provider === 'google') {
         await signInWithPopup(auth, googleProvider);
