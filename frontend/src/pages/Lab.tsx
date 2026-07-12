@@ -208,6 +208,8 @@ export default function Lab() {
   const [noiseModel, setNoiseModel] = useState<'ideal' | 'depolarizing' | 'thermal'>('ideal');
   const [activeOutputTab, setActiveOutputTab] = useState<'visualizer' | 'meetings' | 'terminal'>('visualizer');
   const [isAiChatOpen, setIsAiChatOpen] = useState(false);
+  const [isPro, setIsPro] = useState(false);
+  const [showProModal, setShowProModal] = useState(false);
   
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -250,6 +252,31 @@ export default function Lab() {
         });
         driverObj.drive();
       }, 500); // Wait for UI to settle
+    }
+  }, []);
+
+  // Fetch Pro status
+  useEffect(() => {
+    const userStr = localStorage.getItem('quantumEdgeUser');
+    if (userStr) {
+      try {
+        const obj = JSON.parse(userStr);
+        const username = obj.email || obj.uid || userStr;
+        fetch(`${import.meta.env.VITE_API_URL || ''}/api/user/${encodeURIComponent(username)}/status`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.isPro) setIsPro(true);
+          })
+          .catch(err => console.error(err));
+      } catch (e) {
+        // Fallback for non-JSON strings
+        fetch(`${import.meta.env.VITE_API_URL || ''}/api/user/${encodeURIComponent(userStr)}/status`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.isPro) setIsPro(true);
+          })
+          .catch(err => console.error(err));
+      }
     }
   }, []);
 
@@ -343,6 +370,12 @@ export default function Lab() {
 
   const runCode = async () => {
     if (!code) return;
+
+    if ((noiseModel === 'depolarizing' || noiseModel === 'thermal') && !isPro) {
+      setShowProModal(true);
+      return;
+    }
+
     setLoading(true);
     setOutput({ status: 'Running...' });
     setAiFeedback('');
@@ -415,6 +448,99 @@ export default function Lab() {
       setAiFeedback(`Error: ${err.message}`);
     }
     setReviewLoading(false);
+  };
+
+  const loadRazorpay = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handleUpgrade = async () => {
+    const res = await loadRazorpay();
+    if (!res) {
+      alert('Razorpay SDK failed to load');
+      return;
+    }
+    
+    let token = '';
+    if (auth.currentUser) {
+      token = await auth.currentUser.getIdToken();
+    }
+
+    try {
+      // Create Order
+      const orderRes = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/payment/orders`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (orderRes.status === 401) {
+         alert('Please sign in to upgrade to Pro!');
+         navigate('/auth');
+         return;
+      }
+      
+      const orderData = await orderRes.json();
+
+      let username = '';
+      const userStr = localStorage.getItem('quantumEdgeUser');
+      if (userStr) {
+         try {
+            const obj = JSON.parse(userStr);
+            username = obj.email || obj.uid || userStr;
+         } catch(e) { username = userStr; }
+      }
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_placeholder",
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "QuantumEdge PRO",
+        description: "Unlock Advanced Noise Models & Private Rooms",
+        order_id: orderData.id,
+        handler: async function (response: any) {
+          // Verify Payment
+          const verifyRes = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/payment/verify`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              username
+            })
+          });
+          const verifyData = await verifyRes.json();
+          if (verifyData.success) {
+            setIsPro(true);
+            setShowProModal(false);
+            alert('Welcome to QuantumEdge PRO! Advanced models unlocked.');
+          } else {
+            alert('Payment verification failed.');
+          }
+        },
+        prefill: {
+          name: "Quantum Explorer",
+        },
+        theme: {
+          color: "#8b5cf6"
+        }
+      };
+      
+      const rzp1 = new (window as any).Razorpay(options);
+      rzp1.open();
+    } catch (err) {
+      console.error(err);
+      alert('Error initiating checkout');
+    }
   };
 
   if (!module) return <div className="lab-container"><div className="glass-panel">Loading lab...</div></div>;
@@ -649,6 +775,37 @@ export default function Lab() {
           </div>
         </div>
       </div>
+
+      {/* Pro Modal */}
+      {showProModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(5px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div className="glass-panel" style={{ padding: '2rem', maxWidth: '500px', width: '90%', textAlign: 'center' }}>
+            <h2 style={{ color: 'var(--primary)', marginBottom: '1rem', fontSize: '2rem' }}>Upgrade to PRO 🚀</h2>
+            <p style={{ marginBottom: '1.5rem', color: '#ccc', lineHeight: '1.6' }}>
+              Advanced quantum noise models like <strong>Depolarizing</strong> and <strong>Thermal</strong> require significant computational resources.
+            </p>
+            <ul style={{ textAlign: 'left', margin: '0 auto 2rem auto', display: 'inline-block', color: '#fff' }}>
+              <li>✨ Real-world hardware noise simulation</li>
+              <li>🔒 Create private multiplayer rooms</li>
+              <li>⚡ Unlimited AI Code Reviews</li>
+              <li>🏆 Exclusive PRO Badge on Leaderboard</li>
+            </ul>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <button className="start-btn" onClick={handleUpgrade} style={{ padding: '1rem 2rem', fontSize: '1.1rem' }}>
+                Upgrade Now - ₹999
+              </button>
+              <button className="start-btn" onClick={() => setShowProModal(false)} style={{ background: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)' }}>
+                Maybe Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

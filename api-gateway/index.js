@@ -27,6 +27,16 @@ const Project = require('./models/Project');
 // Middleware
 const { requireAuth } = require('./middleware/auth');
 const rateLimit = require('express-rate-limit');
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
+const { Resend } = require('resend');
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_placeholder',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_placeholder',
+});
+
+const resend = new Resend(process.env.RESEND_API_KEY || 're_placeholder');
 const { parsePagination, buildPaginationMeta } = require('./middleware/paginate');
 
 // Initialize Express & Socket.io
@@ -431,6 +441,20 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/user/:username/status
+ * Fetches user subscription status
+ */
+app.get('/api/user/:username/status', async (req, res) => {
+  try {
+    const user = await User.findOne({ username: req.params.username });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ isPro: user.isPro });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 const { getQuantumCodeReview } = require('./services/aiService');
 
 /**
@@ -541,6 +565,95 @@ app.get('/api/jobs', async (req, res) => {
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ============================================================================
+// MONETIZATION & EMAIL ENDPOINTS
+// ============================================================================
+
+/**
+ * POST /api/payment/orders
+ * Generates a Razorpay order ID for the Pro subscription
+ */
+app.post('/api/payment/orders', requireAuth, async (req, res) => {
+  try {
+    const options = {
+      amount: 999 * 100, // ₹999 in paise
+      currency: "INR",
+      receipt: `rcpt_${req.user.uid}`
+    };
+    const order = await razorpay.orders.create(options);
+    res.json(order);
+  } catch (error) {
+    console.error('Razorpay Error:', error);
+    res.status(500).json({ error: 'Could not create order' });
+  }
+});
+
+/**
+ * POST /api/payment/verify
+ * Verifies Razorpay payment signature and upgrades user to Pro
+ */
+app.post('/api/payment/verify', requireAuth, async (req, res) => {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    const body = razorpay_order_id + "|" + razorpay_payment_id;
+
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_placeholder')
+      .update(body.toString())
+      .digest('hex');
+
+    if (expectedSignature === razorpay_signature) {
+      // Payment is legit! Upgrade user
+      // req.user has email or uid. We might need to find by email if we don't store uid in Mongo.
+      // Wait, currently frontend passes author = email. Let's find by username or email.
+      // The user model uses `username`. If we pass username from frontend...
+      const { username } = req.body; // passed from frontend
+      if (username) {
+         await User.findOneAndUpdate({ username }, { isPro: true });
+      }
+      res.json({ success: true, message: 'Payment verified, upgraded to Pro!' });
+    } else {
+      res.status(400).json({ success: false, error: 'Invalid signature' });
+    }
+  } catch (error) {
+    console.error('Razorpay Verify Error:', error);
+    res.status(500).json({ error: 'Verification failed' });
+  }
+});
+
+/**
+ * POST /api/email/welcome
+ * Sends a welcome email via Resend
+ */
+app.post('/api/email/welcome', async (req, res) => {
+  try {
+    const { email, name } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email required' });
+
+    // Skip sending if API key is not configured (to avoid crashing in dev)
+    if (!process.env.RESEND_API_KEY) {
+      return res.json({ success: true, note: 'Mocked email send - missing Resend API key' });
+    }
+
+    const { data, error } = await resend.emails.send({
+      from: 'QuantumEdge <onboarding@resend.dev>', // Update to verified domain in prod
+      to: [email],
+      subject: 'Welcome to QuantumEdge! 🚀',
+      html: `<h2>Welcome to the Quantum Future, ${name || 'Explorer'}!</h2>
+             <p>We're thrilled to have you join QuantumEdge. Jump into the Lab and start building your first quantum circuit today.</p>
+             <br/>
+             <p>Happy Coding,<br/>The QuantumEdge Team</p>`,
+    });
+
+    if (error) {
+      return res.status(400).json({ error });
+    }
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

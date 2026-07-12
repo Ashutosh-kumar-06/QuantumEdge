@@ -48,6 +48,14 @@ export default function Auth() {
       if (mode === 'signup') {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(userCredential.user, { displayName: name || username || email });
+        
+        // Trigger Welcome Email via Resend backend endpoint
+        fetch(`${import.meta.env.VITE_API_URL || ''}/api/email/welcome`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, name: name || username })
+        }).catch(err => console.error("Welcome email failed", err));
+
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }

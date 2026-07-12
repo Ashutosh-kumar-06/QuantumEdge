@@ -11,7 +11,8 @@ const UserSchema = new mongoose.Schema({
     moduleId: { type: String }, // The ID of the module (e.g., 'quantum-gates')
     completed: { type: Boolean, default: false }, // Whether the user has finished the module
     score: { type: Number, default: 0 } // The user's score on any exercises in the module
-  }]
+  }],
+  isPro: { type: Boolean, default: false } // Pro subscription status
 });
 
 // Export the User model so other files can fetch and update student progress
