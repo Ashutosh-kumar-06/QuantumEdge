@@ -11,6 +11,7 @@ import '../App.css';
 import { useProgress } from '../context/ProgressContext';
 import { io } from 'socket.io-client';
 import CircuitBuilder from '../components/CircuitBuilder';
+import AiTutorChat from '../components/AiTutorChat';
 
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
@@ -205,6 +206,7 @@ export default function Lab() {
   const [language, setLanguage] = useState<'python' | 'cpp'>('python');
   const [noiseModel, setNoiseModel] = useState<'ideal' | 'depolarizing' | 'thermal'>('ideal');
   const [activeOutputTab, setActiveOutputTab] = useState<'visualizer' | 'meetings' | 'terminal'>('visualizer');
+  const [isAiChatOpen, setIsAiChatOpen] = useState(false);
   
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -281,7 +283,7 @@ export default function Lab() {
   // Fetch Cloud Project if URL has ?project=
   useEffect(() => {
     if (projectId) {
-      fetch(`${import.meta.env.VITE_API_URL}/api/projects/${projectId}`)
+      fetch(`${import.meta.env.VITE_API_URL || ''}/api/projects/${projectId}`)
         .then(res => res.json())
         .then(data => {
           if (data && data.code) {
@@ -297,7 +299,7 @@ export default function Lab() {
     try {
       const userStr = localStorage.getItem('quantumEdgeUser');
       const author = userStr ? JSON.parse(userStr).email : 'Anonymous';
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/projects`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/projects`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -382,8 +384,9 @@ export default function Lab() {
 
   const requestAiReview = async () => {
     setReviewLoading(true);
+    setIsAiChatOpen(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/review`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, actualErrorOrOutput: output })
@@ -468,13 +471,14 @@ export default function Lab() {
             </div>
           </div>
 
-          {/* Split Pane Area */}
-          <div style={{ flex: 1, padding: '0.5rem', boxSizing: 'border-box', overflow: 'hidden' }}>
-            <ResizableSplit
-              direction="horizontal"
-              initialRatio={50}
-              storageKey="qe-main-split"
-              first={
+          {/* Editor/Builder Area with Overlay Container */}
+          <div style={{ flex: 1, display: 'flex', position: 'relative' }}>
+            <div style={{ flex: 1 }}>
+              <ResizableSplit
+                direction="horizontal"
+                initialRatio={50}
+                storageKey="qe-main-split"
+                first={
                 /* Left side: Editor or Builder */
                 <div className="tour-code-editor" style={{ height: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--panel-bg)', position: 'relative' }}>
                   {viewMode === 'code' ? (
@@ -610,11 +614,20 @@ export default function Lab() {
                         )}
                       </div>
                     )}
-
                   </div>
                 </div>
               }
             />
+            </div>
+
+            {/* Floating AI Tutor Chat Overlay */}
+            {isAiChatOpen && (
+              <AiTutorChat 
+                onClose={() => setIsAiChatOpen(false)} 
+                codeContext={code}
+                initialFeedback={aiFeedback} 
+              />
+            )}
           </div>
         </div>
       </div>
