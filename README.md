@@ -73,7 +73,16 @@ graph TD
     classDef worker fill:#ef4444,stroke:#b91c1c,stroke-width:2px,color:#fff
 
     %% Components
-    Client[React Frontend<br/>Vite / TS]:::client
+    subgraph ClientBrowsers["Client Browsers (React/Vite)"]
+        ClientA[User A]:::client
+        ClientB[User B]:::client
+        ClientC[User C]:::client
+        
+        ClientA -. "WebRTC Video/Audio" .- ClientB
+        ClientB -. "WebRTC Video/Audio" .- ClientC
+        ClientC -. "WebRTC Video/Audio" .- ClientA
+    end
+    
     Nginx((Nginx<br/>Reverse Proxy<br/>HTTPS / WSS)):::client
     API[API Gateway<br/>Express.js + Socket.io]:::api
     Redis[(Redis<br/>Rate Limiting)]:::db
@@ -93,9 +102,8 @@ graph TD
     end
 
     %% Flow
-    Client -. "WebRTC (Full Mesh Topology)" .- Client
-    Client -- "OAuth2" --> Firebase
-    Client -- "HTTPS / WSS" --> Nginx
+    ClientA -- "OAuth2" --> Firebase
+    ClientBrowsers -- "HTTPS / WSS (REST & Socket.io)" --> Nginx
     Nginx -- "Reverse Proxy" --> API
     API <--> Redis
     API <--> Mongo
