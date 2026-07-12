@@ -12,6 +12,7 @@ import { useProgress } from '../context/ProgressContext';
 import { io } from 'socket.io-client';
 import CircuitBuilder from '../components/CircuitBuilder';
 import AiTutorChat from '../components/AiTutorChat';
+import QuantumSnippets from '../components/QuantumSnippets';
 import { auth } from '../firebase';
 
 import { driver } from 'driver.js';
@@ -206,11 +207,13 @@ export default function Lab() {
   const [aiFeedback, setAiFeedback] = useState<string>('');
   const [language, setLanguage] = useState<'python' | 'cpp'>('python');
   const [noiseModel, setNoiseModel] = useState<'ideal' | 'depolarizing' | 'thermal'>('ideal');
-  const [activeOutputTab, setActiveOutputTab] = useState<'visualizer' | 'meetings' | 'terminal'>('visualizer');
+  const [activeOutputTab, setActiveOutputTab] = useState<'visualizer' | 'terminal' | 'snippets' | 'history'>('terminal');
   const [isAiChatOpen, setIsAiChatOpen] = useState(false);
   const [isPro, setIsPro] = useState(false);
   const [showProModal, setShowProModal] = useState(false);
   
+  const [history, setHistory] = useState<any[]>([]);
+
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const projectId = searchParams.get('project');
@@ -405,19 +408,30 @@ export default function Lab() {
 
       socket.on('job_result', (jobData) => {
         setLoading(false);
+        let result;
         if (jobData.status === 'failed') {
-          setOutput({ error: jobData.result?.error || 'Unknown error occurred.' });
+          result = { error: jobData.result?.error || 'Unknown error occurred.' };
         } else {
-          setOutput({
+          result = {
             status: 'success',
             counts: jobData.result?.counts,
             diagram: jobData.result?.diagram,
             output: jobData.result?.output
-          });
+          };
           if (id) {
             markCompleted(id);
           }
         }
+        setOutput(result);
+        
+        // Save to history
+        setHistory(prev => [{
+          id: Date.now(),
+          timestamp: new Date().toLocaleTimeString(),
+          code: code,
+          output: result
+        }, ...prev].slice(0, 10)); // Keep last 10 runs
+
         socket.disconnect();
       });
 
@@ -460,8 +474,9 @@ export default function Lab() {
       setAiFeedback(data.feedback);
     } catch (err: any) {
       setAiFeedback(`Error: ${err.message}`);
+    } finally {
+      setReviewLoading(false);
     }
-    setReviewLoading(false);
   };
 
   const loadRazorpay = () => {
@@ -673,7 +688,7 @@ export default function Lab() {
                 <div style={{ height: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--panel-bg)', display: 'flex', flexDirection: 'column' }}>
                   {/* Output Tabs */}
                   <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid var(--border-color)' }}>
-                    {['visualizer', 'terminal'].map(tab => (
+                    {['visualizer', 'terminal', 'snippets', 'history'].map(tab => (
                       <button 
                         key={tab}
                         onClick={() => setActiveOutputTab(tab as any)}
@@ -733,6 +748,51 @@ export default function Lab() {
                           </>
                         ) : (
                           <div style={{ color: '#666' }}>Awaiting execution...</div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Snippets Tab */}
+                    {activeOutputTab === 'snippets' && (
+                      <QuantumSnippets 
+                        onSelect={(snippetCode) => {
+                          setCode(snippetCode);
+                          setMode('code');
+                          setActiveOutputTab('terminal');
+                        }}
+                      />
+                    )}
+
+                    {/* History Tab */}
+                    {activeOutputTab === 'history' && (
+                      <div style={{ padding: '1rem', height: '100%', overflowY: 'auto' }}>
+                        <h3 style={{ color: 'var(--primary)', marginBottom: '1rem' }}>⏪ Execution History</h3>
+                        {history.length === 0 ? (
+                          <div style={{ color: '#666' }}>No runs yet. Run a simulation to save it to history.</div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {history.map(item => (
+                              <div key={item.id} style={{ background: '#111', border: '1px solid #333', borderRadius: '8px', padding: '1rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                  <span style={{ color: '#aaa', fontSize: '0.8rem' }}>{item.timestamp}</span>
+                                  <button 
+                                    onClick={() => {
+                                      if (confirm('Restore this snapshot? Your current code will be overwritten.')) {
+                                        setCode(item.code);
+                                        setOutput(item.output);
+                                      }
+                                    }}
+                                    style={{ background: 'transparent', color: 'var(--primary)', border: 'none', cursor: 'pointer', fontSize: '0.85rem', textDecoration: 'underline' }}
+                                  >
+                                    Restore
+                                  </button>
+                                </div>
+                                <div style={{ color: item.output.error ? '#ff5555' : '#ccc', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'monospace' }}>
+                                  {item.output.error ? item.output.error : (item.output.output || item.output.status)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
                     )}

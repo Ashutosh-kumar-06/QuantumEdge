@@ -140,7 +140,7 @@ export default function VideoPage() {
             </div>
             
             <div style={{ flex: 1, position: 'relative' }}>
-              <SharedEditor socket={socket} roomId={socketRoomId!} readOnly={!canEdit} code={code} setCode={setCode} />
+              <SharedEditor socket={socket} roomId={socketRoomId!} readOnly={!canEdit} code={code} setCode={setCode} username={user.email} />
             </div>
 
             {/* Terminal Pane */}

@@ -92,6 +92,11 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('code_update', { code });
   });
 
+  // Shared Cursor Sync
+  socket.on('cursor_move', ({ roomId, username, line, col }) => {
+    socket.to(roomId).emit('cursor_move', { username, line, col });
+  });
+
   // Shared Terminal Sync
   socket.on('terminal_output', ({ roomId, output }) => {
     socket.to(roomId).emit('terminal_output', { output });
