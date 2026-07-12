@@ -83,11 +83,11 @@ Keep your responses helpful, beginner-friendly, under 150 words, and DO NOT give
       history: formattedHistory
     });
 
-    const response = await chat.sendMessage({ message: newPrompt });
+    const response = await chat.sendMessage(newPrompt);
     return response.text;
   } catch (error) {
     console.error('Gemini Chat Error:', error);
-    throw new Error('Failed to continue chat with AI Tutor.');
+    throw new Error('Failed to continue chat with AI Tutor. Details: ' + (error.message || error));
   }
 }
 
