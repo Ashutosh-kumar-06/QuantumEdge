@@ -4,6 +4,7 @@
   <br /><br />
   <h1>⚛️ QuantumEdge</h1>
   <p><strong>The Next-Generation Interactive Quantum Computing Curriculum & Collaborative IDE</strong></p>
+  <p><h3>🔴 Live Demo: <a href="https://quantumedge.duckdns.org/">https://quantumedge.duckdns.org/</a></h3></p>
 
   <p>
     <a href="#-architecture"><img alt="Docker Architecture" src="https://img.shields.io/badge/Architecture-Microservices-blue?style=for-the-badge&logo=docker" /></a>
@@ -78,6 +79,8 @@ graph TD
     Redis[(Redis<br/>Rate Limiting)]:::db
     Mongo[(MongoDB<br/>Users, Courses)]:::db
     RabbitMQ[[RabbitMQ<br/>Message Broker]]:::queue
+    Firebase((Firebase<br/>Auth API)):::client
+    Gemini((Gemini AI<br/>API)):::client
     
     subgraph Workers
         PyWorker[Python Worker<br/>Qiskit]:::worker
@@ -90,11 +93,13 @@ graph TD
     end
 
     %% Flow
+    Client -. "WebRTC (Peer-to-Peer)" .- Client
+    Client -- "OAuth2" --> Firebase
     Client -- "HTTPS / WSS" --> Nginx
     Nginx -- "Reverse Proxy" --> API
-    Client -. "WebRTC (Peer-to-Peer)" .- Client
     API <--> Redis
     API <--> Mongo
+    API -- "REST" --> Gemini
     
     API -- "Publish Job (Async)" --> RabbitMQ
     RabbitMQ -- "Consume Job" --> PyWorker
