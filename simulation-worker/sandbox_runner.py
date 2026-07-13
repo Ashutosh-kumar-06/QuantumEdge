@@ -3,6 +3,7 @@ import sys
 # Import json to format the output as a JSON string
 import json
 import io
+import os
 # Import QuantumCircuit and transpile from Qiskit
 from qiskit import QuantumCircuit, transpile
 # Import the AerSimulator to simulate quantum circuits classically
@@ -95,11 +96,32 @@ if __name__ == "__main__":
     payload_str = sys.stdin.read()
     try:
         payload = json.loads(payload_str)
-        code = payload.get('code', '')
+        files = payload.get('files', {})
+        main_file = payload.get('mainFile', 'main.py')
         noise_model = payload.get('noiseModel', 'ideal')
+        
+        if not files and 'code' in payload:
+            files = {main_file: payload.get('code', '')}
     except:
-        code = payload_str
+        files = {'main.py': payload_str}
+        main_file = 'main.py'
         noise_model = 'ideal'
         
+    workspace_dir = '/tmp/workspace'
+    os.makedirs(workspace_dir, exist_ok=True)
+    
+    for file_path, content in files.items():
+        if file_path.endswith('/'):
+            os.makedirs(os.path.join(workspace_dir, file_path), exist_ok=True)
+        else:
+            full_path = os.path.join(workspace_dir, file_path)
+            os.makedirs(os.path.dirname(full_path), exist_ok=True)
+            with open(full_path, 'w') as f:
+                f.write(content)
+                
+    sys.path.insert(0, workspace_dir)
+    os.chdir(workspace_dir)
+        
+    code = files.get(main_file, '')
     res = run_simulation(code, noise_model)
     print(json.dumps(res))

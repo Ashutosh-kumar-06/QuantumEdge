@@ -32,7 +32,8 @@ export default function ChatPage() {
     }
   }, [socketRoomId]);
 
-  const [code, setCode] = useState('// Welcome to the Shared Code Editor\n');
+  const [files, setFiles] = useState<{ [path: string]: string }>({ 'main.py': '// Write your code here!\n' });
+  const [activeFile, setActiveFile] = useState('main.py');
   const [language, setLanguage] = useState<'python' | 'cpp'>('python');
   const [noiseModel, setNoiseModel] = useState<'ideal' | 'depolarizing' | 'thermal'>('ideal');
   const [output, setOutput] = useState<any>(null);
@@ -68,7 +69,7 @@ export default function ChatPage() {
       const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, language, noiseModel })
+        body: JSON.stringify({ files, mainFile: activeFile, language, noiseModel })
       });
       const data = await res.json();
       setOutput(data);
@@ -113,33 +114,33 @@ export default function ChatPage() {
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         
         {isEditorMinimized && (
-          <div style={{ padding: '0.5rem', borderRight: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', background: 'var(--panel-bg)' }}>
-            <button onClick={() => setIsEditorMinimized(false)} style={{ background: 'transparent', color: 'var(--primary)', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>[+] Expand Editor</button>
+          <div className="glass-panel" style={{ padding: '0.5rem', display: 'flex', alignItems: 'center', margin: '0 0.5rem' }}>
+            <button onClick={() => setIsEditorMinimized(false)} className="smooth-transition" style={{ background: 'transparent', color: 'var(--primary-color)', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>[+] Expand Editor</button>
           </div>
         )}
 
         {!isEditorMinimized && (
-          <div style={{ flex: isPanelMinimized ? 1 : 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-color)' }}>
+          <div className="glass-panel smooth-transition" style={{ flex: isPanelMinimized ? 1 : 1, display: 'flex', flexDirection: 'column', margin: '0 0.5rem', overflow: 'hidden' }}>
             {/* Execution Bar */}
-            <div style={{ display: 'flex', gap: '1rem', padding: '0.5rem 1rem', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid var(--border-color)', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', gap: '1rem', padding: '0.5rem 1rem', background: 'rgba(0,0,0,0.4)', borderBottom: '1px solid rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                <div style={{ display: 'flex', background: '#222', borderRadius: '4px', overflow: 'hidden' }}>
-                  <button onClick={() => setViewMode('code')} style={{ background: viewMode === 'code' ? 'var(--primary)' : 'transparent', color: viewMode === 'code' ? '#000' : '#fff', border: 'none', padding: '0.4rem 1rem', cursor: 'pointer', fontWeight: 'bold' }}>Code</button>
-                  <button onClick={() => setViewMode('whiteboard')} style={{ background: viewMode === 'whiteboard' ? 'var(--primary)' : 'transparent', color: viewMode === 'whiteboard' ? '#000' : '#fff', border: 'none', padding: '0.4rem 1rem', cursor: 'pointer', fontWeight: 'bold' }}>Whiteboard</button>
+                <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', overflow: 'hidden' }}>
+                  <button onClick={() => setViewMode('code')} className="smooth-transition" style={{ background: viewMode === 'code' ? 'var(--primary-color)' : 'transparent', color: viewMode === 'code' ? '#000' : '#fff', border: 'none', padding: '0.4rem 1rem', cursor: 'pointer', fontWeight: 'bold' }}>Code</button>
+                  <button onClick={() => setViewMode('whiteboard')} className="smooth-transition" style={{ background: viewMode === 'whiteboard' ? 'var(--primary-color)' : 'transparent', color: viewMode === 'whiteboard' ? '#000' : '#fff', border: 'none', padding: '0.4rem 1rem', cursor: 'pointer', fontWeight: 'bold' }}>Whiteboard</button>
                 </div>
                 
                 {viewMode === 'code' && (
                   <>
-                    <select value={language} onChange={e => setLanguage(e.target.value as any)} style={{ background: '#222', color: '#fff', border: '1px solid #444', padding: '0.4rem', borderRadius: '4px' }}>
-                      <option value="python">Qiskit (Python)</option>
-                      <option value="cpp">QuEST (C++)</option>
+                    <select value={language} onChange={e => setLanguage(e.target.value as any)} style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', padding: '0.4rem', borderRadius: '8px', outline: 'none' }}>
+                      <option value="python" style={{ background: '#000' }}>Qiskit (Python)</option>
+                      <option value="cpp" style={{ background: '#000' }}>QuEST (C++)</option>
                     </select>
-                    <select value={noiseModel} onChange={e => setNoiseModel(e.target.value as any)} style={{ background: '#222', color: '#fff', border: '1px solid #444', padding: '0.4rem', borderRadius: '4px' }}>
-                      <option value="ideal">Ideal (No Noise)</option>
-                      <option value="depolarizing">Depolarizing Noise</option>
-                      <option value="thermal">Thermal Relaxation</option>
+                    <select value={noiseModel} onChange={e => setNoiseModel(e.target.value as any)} style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', padding: '0.4rem', borderRadius: '8px', outline: 'none' }}>
+                      <option value="ideal" style={{ background: '#000' }}>Ideal (No Noise)</option>
+                      <option value="depolarizing" style={{ background: '#000' }}>Depolarizing Noise</option>
+                      <option value="thermal" style={{ background: '#000' }}>Thermal Relaxation</option>
                     </select>
-                    <button onClick={runSimulation} disabled={running || !canEdit} style={{ background: 'var(--primary)', color: '#000', border: 'none', padding: '0.4rem 1.5rem', borderRadius: '4px', fontWeight: 'bold', cursor: (running || !canEdit) ? 'not-allowed' : 'pointer', opacity: (running || !canEdit) ? 0.7 : 1 }}>
+                    <button onClick={runSimulation} disabled={running || !canEdit} className="run-btn" style={{ cursor: (running || !canEdit) ? 'not-allowed' : 'pointer', opacity: (running || !canEdit) ? 0.7 : 1 }}>
                       {running ? 'Running...' : 'Run Simulation'}
                     </button>
                   </>
@@ -151,7 +152,7 @@ export default function ChatPage() {
             <div style={{ flex: 1, position: 'relative' }}>
               <Suspense fallback={<div style={{ padding: 20, color: '#38bdf8' }}>Loading Workspace...</div>}>
                 {viewMode === 'code' ? (
-                  <SharedEditor socket={socket} roomId={socketRoomId!} readOnly={!canEdit} code={code} setCode={setCode} username={user.email} />
+                  <SharedEditor socket={socket} roomId={socketRoomId!} readOnly={!canEdit} username={user.email} onFilesChange={setFiles} onActiveFileChange={setActiveFile} />
                 ) : (
                   <SharedWhiteboard socket={socket} roomId={socketRoomId!} readOnly={!canEdit} username={user.email} />
                 )}
@@ -159,7 +160,7 @@ export default function ChatPage() {
             </div>
 
             {/* Terminal Pane */}
-            <div style={{ height: '30%', borderTop: '1px solid var(--border-color)', background: '#0d0d0d', padding: '1rem', overflowY: 'auto', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+            <div className="terminal" style={{ height: '30%', borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.6)', padding: '1rem', overflowY: 'auto', borderRadius: '0 0 16px 16px' }}>
               {output ? (
                 <>
                   {output.output && output.output.trim() !== '' && (
@@ -180,17 +181,18 @@ export default function ChatPage() {
         )}
 
         {isPanelMinimized && (
-          <div style={{ padding: '0.5rem', display: 'flex', alignItems: 'center', background: 'var(--panel-bg)' }}>
-            <button onClick={() => setIsPanelMinimized(false)} style={{ background: 'transparent', color: 'var(--primary)', border: 'none', cursor: 'pointer', fontWeight: 'bold', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>[+] Chat</button>
+          <div className="glass-panel" style={{ padding: '0.5rem', display: 'flex', alignItems: 'center', margin: '0 0.5rem' }}>
+            <button onClick={() => setIsPanelMinimized(false)} className="smooth-transition" style={{ background: 'transparent', color: 'var(--primary-color)', border: 'none', cursor: 'pointer', fontWeight: 'bold', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>[+] Chat</button>
           </div>
         )}
 
         {!isPanelMinimized && (
-          <div style={{ width: isEditorMinimized ? '100%' : '400px', display: 'flex', flexDirection: 'column', background: 'var(--panel-bg)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 1rem', background: 'rgba(0,0,0,0.2)', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '1rem' }}>Chat</h3>
-              <button onClick={() => setIsPanelMinimized(true)} style={{ background: 'transparent', color: '#888', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}>[-]</button>
-            </div>
+          <div className="smooth-transition" style={{ width: isEditorMinimized ? '100%' : '400px', display: 'flex', flexDirection: 'column' }}>
+            <div className="glass-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', margin: '0 0.5rem 0 0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(0,0,0,0.4)', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <h3 style={{ margin: 0, fontSize: '1rem' }}>Chat</h3>
+                <button onClick={() => setIsPanelMinimized(true)} style={{ background: 'transparent', color: '#888', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}>[-]</button>
+              </div>
             <div style={{ flex: 1, position: 'relative' }}>
               <MultiplayerChat 
                 socket={socket} 

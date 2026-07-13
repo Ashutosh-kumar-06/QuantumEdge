@@ -58,8 +58,8 @@ export default function MultiplayerChat({ socket, username, roomId, setRoomId }:
 
   if (!inRoom) {
     return (
-      <div style={{ padding: '2rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
-        <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>Multiplayer Lab</h3>
+      <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%', margin: '1rem' }}>
+        <h3 style={{ margin: '0 0 0.5rem 0', background: 'linear-gradient(90deg, var(--primary-color), var(--accent-color))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Multiplayer Lab</h3>
         <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', fontSize: '0.9rem' }}>Collaborate with others in real-time. Join a room to share code and chat.</p>
         <input 
           value={roomId} 
@@ -75,44 +75,46 @@ export default function MultiplayerChat({ socket, username, roomId, setRoomId }:
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'rgba(10, 10, 15, 0.8)', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'transparent' }}>
       {/* Header */}
-      <div style={{ padding: '1rem', background: 'rgba(0,0,0,0.4)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="glass-panel" style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1rem 1rem 0 1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#64ffda', boxShadow: '0 0 10px #64ffda' }}></div>
-          <span style={{ fontWeight: 'bold', fontSize: '1.1rem', letterSpacing: '0.5px' }}>Room: <span style={{ color: 'var(--primary)' }}>{roomId}</span></span>
+          <span style={{ fontWeight: 'bold', fontSize: '1.1rem', letterSpacing: '0.5px' }}>Room: <span style={{ color: 'var(--primary-color)' }}>{roomId}</span></span>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button onClick={leaveRoom} style={{ background: 'transparent', color: '#888', border: '1px solid #444', padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.2s' }}>Leave</button>
+          <button onClick={leaveRoom} style={{ background: 'transparent', color: '#888', border: '1px solid rgba(255,255,255,0.2)', padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.2s' }}>Leave</button>
         </div>
       </div>
 
       {/* Chat Messages */}
-      <div style={{ flex: 1, padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(0,0,0,0.2)' }}>
+      <div style={{ flex: 1, padding: '1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {messages.map((msg, i) => {
           const isSystem = msg.user === 'System';
           const isMe = msg.user === username;
           
           if (isSystem) {
             return (
-              <div key={i} style={{ textAlign: 'center', fontSize: '0.8rem', color: '#888', margin: '0.5rem 0' }}>
-                <span style={{ background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.8rem', borderRadius: '12px' }}>{msg.text}</span>
+              <div key={i} className="animate-pop-in" style={{ textAlign: 'center', fontSize: '0.8rem', color: '#888', margin: '0.5rem 0' }}>
+                <span className="glass-pill" style={{ padding: '0.3rem 0.8rem' }}>{msg.text}</span>
               </div>
             );
           }
 
           return (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+            <div key={i} className="animate-pop-in" style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
               <span style={{ fontSize: '0.75rem', color: '#888', marginBottom: '0.2rem', marginLeft: isMe ? '0' : '0.5rem', marginRight: isMe ? '0.5rem' : '0' }}>{msg.user}</span>
               <div style={{ 
                 background: isMe ? 'linear-gradient(135deg, rgba(100,255,218,0.2), rgba(0,210,255,0.2))' : 'rgba(255,255,255,0.05)',
-                color: isMe ? 'var(--primary)' : '#fff',
+                color: isMe ? 'var(--primary-color)' : '#fff',
                 border: isMe ? '1px solid rgba(100,255,218,0.3)' : '1px solid rgba(255,255,255,0.1)',
+                backdropFilter: 'blur(10px)',
                 padding: '0.6rem 1rem', 
                 borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                 maxWidth: '85%',
                 lineHeight: '1.4',
-                fontSize: '0.95rem'
+                fontSize: '0.95rem',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
               }}>
                 {msg.text}
               </div>
@@ -122,17 +124,15 @@ export default function MultiplayerChat({ socket, username, roomId, setRoomId }:
       </div>
 
       {/* Chat Input */}
-      <form onSubmit={sendMessage} style={{ display: 'flex', padding: '1rem', background: 'rgba(0,0,0,0.3)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <form onSubmit={sendMessage} className="glass-dock" style={{ display: 'flex', padding: '0.5rem', margin: '0 1rem 1rem 1rem', borderRadius: '30px' }}>
         <input 
           value={input} 
           onChange={e => setInput(e.target.value)} 
           placeholder="Type a message..."
-          style={{ flex: 1, padding: '0.8rem 1rem', background: 'rgba(0,0,0,0.5)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '24px', outline: 'none', fontSize: '0.95rem', transition: 'border 0.2s' }}
-          onFocus={(e) => e.target.style.border = '1px solid var(--primary)'}
-          onBlur={(e) => e.target.style.border = '1px solid rgba(255,255,255,0.1)'}
+          style={{ flex: 1, padding: '0.8rem 1.2rem', background: 'transparent', color: '#fff', border: 'none', outline: 'none', fontSize: '0.95rem' }}
         />
-        <button type="submit" disabled={!input.trim()} style={{ marginLeft: '0.5rem', padding: '0 1.2rem', background: input.trim() ? 'var(--primary)' : '#444', color: '#000', border: 'none', borderRadius: '24px', cursor: input.trim() ? 'pointer' : 'not-allowed', fontWeight: 'bold', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        <button type="submit" className="smooth-transition" disabled={!input.trim()} style={{ padding: '0 1.2rem', background: input.trim() ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)', color: '#000', border: 'none', borderRadius: '24px', cursor: input.trim() ? 'pointer' : 'not-allowed', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={input.trim() ? '#000' : '#888'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>
       </form>
     </div>

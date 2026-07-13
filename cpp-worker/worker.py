@@ -30,7 +30,7 @@ def connect_queue():
             time.sleep(5)
 
 # Function to compile and execute the user's C++ QuEST code securely
-def run_cpp_code(code, status_callback=None):
+def run_cpp_code(files, main_file, status_callback=None):
     try:
         if status_callback:
             status_callback("Provisioning Sandbox (C++)...")
@@ -41,21 +41,18 @@ def run_cpp_code(code, status_callback=None):
             "--network", "none", # No internet access
             "--memory", "256m", # Limit memory
             "--cpus", "0.5", # Limit CPU usage
-            "--entrypoint", "bash",
             "quantumedge-cpp-worker", 
-            # The bash command does three things:
-            # 1. 'cat > user_code.cpp' saves the incoming stdin to a file
-            # 2. 'g++ ...' compiles the file linking the QuEST library
-            # 3. './user_circuit' runs the compiled executable
-            "-c", "cat > user_code.cpp && g++ user_code.cpp -o user_circuit -I/QuEST/QuEST/include -L/QuEST/build/QuEST -lQuEST -lm && ./user_circuit"
+            "python", "sandbox_runner.py"
         ]
         
-        # Run the docker command, passing the user's C++ code via standard input (stdin)
+        payload = json.dumps({"files": files, "mainFile": main_file})
+        
+        # Run the docker command, passing the user's files via standard input (stdin)
         process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         if status_callback:
             status_callback("Compiling & Executing QuEST Code...")
             
-        stdout, stderr = process.communicate(input=code, timeout=15)
+        stdout, stderr = process.communicate(input=payload, timeout=15)
         
         # If compilation or execution failed (non-zero return code), return the stderr output
         if process.returncode != 0:
@@ -78,17 +75,20 @@ def callback(ch, method, properties, body):
     # Parse the incoming JSON message
     job = json.loads(body)
     job_id = job.get('jobId')
-    print(f"Received C++ job {job_id}")
+    print(f"Received QuEST job {job_id}")
     
-    # Extract the code
+    # Extract files from the job
     code = job.get('code')
+    files = job.get('files', {'main.cpp': code})
+    main_file = job.get('mainFile', 'main.cpp')
+    
     def status_callback(status_msg):
         ch.basic_publish(exchange='', routing_key='job_results', body=json.dumps({"jobId": job_id, "status": status_msg}))
 
-    # Run the C++ code compilation and execution
-    result = run_cpp_code(code, status_callback)
+    # Run the compilation and execution
+    result = run_cpp_code(files, main_file, status_callback)
     
-    # Prepare the response package
+    # Prepare the response package to send back to the API Gateway 
     response = {
         "jobId": job_id,
         "result": result

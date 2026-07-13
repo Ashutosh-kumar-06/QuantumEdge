@@ -698,7 +698,9 @@ app.post('/api/chat', requireAuth, reviewLimiter, async (req, res) => {
  */
 app.post('/api/simulate', simulateLimiter, async (req, res) => {
   try {
-    const { code, language, noiseModel } = req.body;
+    const { files, mainFile, language, noiseModel } = req.body;
+    const code = files ? files[mainFile] : req.body.code;
+    
     if (!code) {
       return res.status(400).json({ error: 'No code provided' });
     }
@@ -716,7 +718,7 @@ app.post('/api/simulate', simulateLimiter, async (req, res) => {
     }
 
     const jobId = Math.random().toString(36).substring(7);
-    const job = { jobId, code, language: language || 'python', noiseModel: noiseModel || 'ideal' };
+    const job = { jobId, files: files || { 'main.py': code }, mainFile: mainFile || 'main.py', language: language || 'python', noiseModel: noiseModel || 'ideal' };
     const queueName = job.language === 'cpp' ? 'cpp_jobs' : 'quantum_jobs';
 
     if (channel) {
@@ -737,7 +739,9 @@ app.post('/api/simulate', simulateLimiter, async (req, res) => {
  */
 app.post('/api/submit', requireAuth, simulateLimiter, async (req, res) => {
   try {
-    const { code, language, challengeId } = req.body;
+    const { files, mainFile, language, challengeId } = req.body;
+    const code = files ? files[mainFile] : req.body.code;
+    
     if (!code || !challengeId) {
       return res.status(400).json({ error: 'Code and challengeId required' });
     }
@@ -757,7 +761,7 @@ app.post('/api/submit', requireAuth, simulateLimiter, async (req, res) => {
     const username = req.user.email ? req.user.email.split('@')[0] : 'Unknown';
 
     const jobId = Math.random().toString(36).substring(7);
-    const job = { jobId, code, language: language || 'python', challengeId, username };
+    const job = { jobId, files: files || { 'main.py': code }, mainFile: mainFile || 'main.py', language: language || 'python', challengeId, username };
     const queueName = job.language === 'cpp' ? 'cpp_jobs' : 'quantum_jobs';
 
     if (channel) {

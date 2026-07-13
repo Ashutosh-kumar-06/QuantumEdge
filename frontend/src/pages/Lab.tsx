@@ -511,7 +511,7 @@ export default function Lab() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ code, language, challengeId: module?.id })
+        body: JSON.stringify({ files, mainFile: activeFile, language, challengeId: module?.id })
       });
       const data = await response.json();
       
@@ -596,7 +596,7 @@ export default function Lab() {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({ code, language, noiseModel })
+        body: JSON.stringify({ files, mainFile: activeFile, language, noiseModel })
       });
       const data = await response.json();
       
@@ -905,7 +905,9 @@ export default function Lab() {
                         onFileCreate={(filename) => {
                           if (!files[filename]) {
                             setFiles(prev => ({ ...prev, [filename]: '' }));
-                            setActiveFile(filename);
+                            if (!filename.endsWith('/')) {
+                              setActiveFile(filename);
+                            }
                           }
                         }}
                         onFileDelete={(filename) => {

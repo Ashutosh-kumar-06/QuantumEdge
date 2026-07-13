@@ -266,10 +266,10 @@ export default function MultiplayerVideoCall({ socket, roomId, username, canMic 
     <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0a0a0f', borderRadius: isFullscreen ? '0' : '12px', overflow: 'hidden', border: isFullscreen ? 'none' : '1px solid rgba(255,255,255,0.05)', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
       {/* Header */}
       {!isFullscreen && (
-        <div style={{ padding: '1rem', background: 'rgba(0,0,0,0.4)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="glass-panel" style={{ padding: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1rem', borderRadius: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#64ffda', boxShadow: '0 0 10px #64ffda' }}></div>
-            <span style={{ fontWeight: 'bold', fontSize: '1.1rem', letterSpacing: '0.5px' }}>Team Session</span>
+            <div className="active-speaker" style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#64ffda' }}></div>
+            <span style={{ fontWeight: 'bold', fontSize: '1.2rem', letterSpacing: '0.5px', background: 'linear-gradient(90deg, var(--primary-color), var(--accent-color))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Team Session</span>
           </div>
           <div>
             {!videoEnabled && (
@@ -283,11 +283,11 @@ export default function MultiplayerVideoCall({ socket, roomId, username, canMic 
 
       {/* Grid of Videos */}
       {videoEnabled ? (
-        <>
-          <div style={{ flex: 1, padding: '1rem', overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', background: '#050505', alignContent: 'center', justifyContent: 'center' }}>
+        <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', background: 'transparent' }}>
+          <div style={{ flex: 1, padding: '1rem', overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', alignContent: 'center', justifyContent: 'center' }}>
             
             {/* Local Video */}
-            <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '12px', overflow: 'hidden', background: '#111', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}>
+            <div className={`animate-pop-in ${audioEnabled ? 'active-speaker' : ''}`} style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '16px', overflow: 'hidden', background: '#111', border: '2px solid transparent', boxShadow: '0 8px 30px rgba(0,0,0,0.4)' }}>
               {isScreenSharing ? (
                 <VideoPlayer stream={screenStreamRef.current!} isLocal={false} />
               ) : (
@@ -302,9 +302,9 @@ export default function MultiplayerVideoCall({ socket, roomId, username, canMic 
 
             {/* Remote Videos */}
             {Object.entries(remoteStreams).map(([id, stream]) => (
-              <div key={id} style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '12px', overflow: 'hidden', background: '#111', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}>
+              <div key={id} className="animate-pop-in" style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '16px', overflow: 'hidden', background: '#111', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 30px rgba(0,0,0,0.4)' }}>
                 <VideoPlayer stream={stream} isLocal={false} />
-                <div style={{ position: 'absolute', bottom: '0.75rem', left: '0.75rem', background: 'rgba(0,0,0,0.7)', padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.85rem', color: '#fff' }}>
+                <div className="glass-pill" style={{ position: 'absolute', bottom: '0.75rem', left: '0.75rem', padding: '0.4rem 0.8rem', fontSize: '0.85rem', color: '#fff' }}>
                   Peer {id.substring(0, 4)}
                 </div>
               </div>
@@ -312,7 +312,8 @@ export default function MultiplayerVideoCall({ socket, roomId, username, canMic 
           </div>
 
           {/* Zoom-like Toolbar */}
-          <div style={{ padding: '1rem', background: '#181820', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'center', gap: '1.5rem', alignItems: 'center' }}>
+          <div style={{ position: 'absolute', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)', display: 'flex', justifyContent: 'center', zIndex: 100 }}>
+            <div className="glass-dock" style={{ padding: '0.8rem 2rem', display: 'flex', gap: '2rem', alignItems: 'center' }}>
             
             {/* Mute Mic */}
             <button onClick={toggleMic} disabled={!canMic} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', background: 'transparent', border: 'none', color: audioEnabled ? '#fff' : '#ff6b6b', cursor: canMic ? 'pointer' : 'not-allowed', opacity: canMic ? 1 : 0.5, transition: 'transform 0.1s' }} onMouseDown={e => { if(canMic) e.currentTarget.style.transform = 'scale(0.9)'; }} onMouseUp={e => { if(canMic) e.currentTarget.style.transform = 'scale(1)'; }}>
@@ -347,14 +348,15 @@ export default function MultiplayerVideoCall({ socket, roomId, username, canMic 
             </button>
 
             {/* Leave Meeting */}
-            <button onClick={leaveMeeting} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', marginLeft: 'auto', transition: 'transform 0.1s' }} onMouseDown={e => e.currentTarget.style.transform = 'scale(0.9)'} onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}>
-              <div style={{ width: '60px', height: '40px', borderRadius: '8px', background: '#ff4757', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 'bold', boxShadow: '0 4px 15px rgba(255, 71, 87, 0.4)' }}>
-                Leave
+            <button onClick={leaveMeeting} className="smooth-transition" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', marginLeft: '1rem' }} onMouseDown={e => e.currentTarget.style.transform = 'scale(0.9)'} onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'linear-gradient(135deg, #ff4757, #ff6b81)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', boxShadow: '0 4px 15px rgba(255, 71, 87, 0.4)' }}>
+                ✖
               </div>
-              <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>End Call</span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>End</span>
             </button>
+            </div>
           </div>
-        </>
+        </div>
       ) : (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666', background: '#111' }}>
           <div style={{ textAlign: 'center' }}>

@@ -29,8 +29,8 @@ def connect_queue():
             print("RabbitMQ not ready, retrying in 5 seconds...")
             time.sleep(5)
 
-# Function to execute the user's Python code securely
-def run_simulation(code, noise_model='ideal', status_callback=None):
+# We pass the files payload to the ephemeral container via stdin, and the container parses it and runs it.
+def run_simulation(files, main_file, noise_model, status_callback=None):
     try:
         if status_callback:
             status_callback("Provisioning Sandbox...")
@@ -46,8 +46,8 @@ def run_simulation(code, noise_model='ideal', status_callback=None):
             "sandbox_runner.py" # The script inside the container that will actually execute the code
         ]
         
-        # Pass both code and noiseModel via stdin as JSON
-        payload = json.dumps({"code": code, "noiseModel": noise_model})
+        # Pass files, mainFile, and noiseModel via stdin as JSON
+        payload = json.dumps({"files": files, "mainFile": main_file, "noiseModel": noise_model})
         
         process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         if status_callback:
@@ -82,15 +82,17 @@ def callback(ch, method, properties, body):
     job_id = job.get('jobId')
     print(f"Received Qiskit job {job_id}")
     
-    # Extract the code from the job
+    # Extract the files from the job
     code = job.get('code')
     noise_model = job.get('noiseModel', 'ideal')
+    files = job.get('files', {'main.py': code})
+    main_file = job.get('mainFile', 'main.py')
     
     def status_callback(status_msg):
         ch.basic_publish(exchange='', routing_key='job_results', body=json.dumps({"jobId": job_id, "status": status_msg}))
         
     # Run the simulation and get the results
-    result = run_simulation(code, noise_model, status_callback)
+    result = run_simulation(files, main_file, noise_model, status_callback)
     
     # Prepare the response package to send back to the API Gateway
     response = {
