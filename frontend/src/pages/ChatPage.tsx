@@ -202,6 +202,7 @@ export default function ChatPage() {
                 setRoomId={() => {}}
               />
             </div>
+            </div>
           </div>
         )}
       </div>
