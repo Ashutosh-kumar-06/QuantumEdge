@@ -36,11 +36,24 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let savedUser = localStorage.getItem('quantumEdgeUser');
+    let displayUsername = '';
+    
     if (!savedUser) {
-      savedUser = 'QuantumExplorer_' + Math.floor(Math.random() * 10000);
-      localStorage.setItem('quantumEdgeUser', savedUser);
+      displayUsername = 'QuantumExplorer_' + Math.floor(Math.random() * 10000);
+      // We don't save it to quantumEdgeUser to avoid overwriting auth state
+    } else {
+      try {
+        const parsed = JSON.parse(savedUser);
+        if (parsed && parsed.email) {
+          displayUsername = parsed.email.split('@')[0];
+        } else {
+          displayUsername = savedUser;
+        }
+      } catch (e) {
+        displayUsername = savedUser;
+      }
     }
-    setUsername(savedUser);
+    setUsername(displayUsername);
   }, []);
 
   const markCompleted = async (moduleId: string) => {
