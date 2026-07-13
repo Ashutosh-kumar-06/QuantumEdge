@@ -33,6 +33,7 @@ export interface Module {
   // 'content' holds the full tutorial text for this module, written in Markdown
   // format (a simple text formatting language used for rich text).
   content: string;
+  challenge?: any;
 }
 
 // 'Progress' represents a student's progress on a specific module.

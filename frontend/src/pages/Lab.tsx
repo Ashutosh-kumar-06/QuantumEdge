@@ -212,7 +212,7 @@ export default function Lab() {
   const [aiFeedback, setAiFeedback] = useState<string>('');
   const [language, setLanguage] = useState<'python' | 'cpp'>('python');
   const [noiseModel, setNoiseModel] = useState<'ideal' | 'depolarizing' | 'thermal'>('ideal');
-  const [activeOutputTab, setActiveOutputTab] = useState<'visualizer' | 'terminal' | 'snippets' | 'history'>('terminal');
+  const [activeOutputTab, setActiveOutputTab] = useState<'visualizer' | 'terminal' | 'snippets' | 'history' | 'challenge'>('terminal');
   const [isAiChatOpen, setIsAiChatOpen] = useState(false);
   const [isPro, setIsPro] = useState(false);
   const [showProModal, setShowProModal] = useState(false);
@@ -486,6 +486,76 @@ export default function Lab() {
       setActiveFile('main.py');
     }
   }
+  const submitChallenge = async () => {
+    if (!auth.currentUser) {
+      alert('Please sign in to submit challenges to the leaderboard!');
+      navigate('/auth');
+      return;
+    }
+    const code = files[activeFile];
+    if (!code) return;
+
+    if ((noiseModel === 'depolarizing' || noiseModel === 'thermal') && !isPro) {
+      setShowProModal(true);
+      return;
+    }
+
+    setLoading(true);
+    setOutput({ status: 'Grading Challenge...' });
+    setAiFeedback('');
+    try {
+      let token = await auth.currentUser.getIdToken();
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/submit`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ code, language, challengeId: module?.id })
+      });
+      const data = await response.json();
+      
+      if (!response.ok) {
+        setLoading(false);
+        setOutput({ error: data.error, errorType: data.errorType || 'system' });
+        return;
+      }
+      
+      const socket = io(import.meta.env.VITE_API_URL);
+      socket.on('connect', () => { socket.emit('subscribe_job', data.jobId); });
+      socket.on('job_status', (jobData) => { setOutput(prev => ({ ...prev, status: jobData.status })); });
+      socket.on('job_result', (jobData) => {
+        setLoading(false);
+        let result;
+        if (jobData.status === 'failed') {
+          result = { error: jobData.result?.error || 'Unknown error occurred.', errorType: jobData.result?.errorType || 'system' };
+        } else {
+          result = {
+            status: 'success',
+            counts: jobData.result?.counts,
+            diagram: jobData.result?.diagram,
+            output: jobData.result?.output
+          };
+          if (id) markCompleted(id);
+        }
+        setOutput(result);
+        
+        if (jobData.challengeResult) {
+          const { passed, score, metrics, title } = jobData.challengeResult;
+          if (passed) {
+            alert(`🎉 Challenge Passed!\n\nScore: ${score} XP\nGate Count: ${metrics.gateCount}\nDepth: ${metrics.depth}\nRuntime: ${Math.floor(metrics.runtimeMs)}ms\nFidelity: ${metrics.fidelity ? metrics.fidelity.toFixed(3) : 'N/A'}`);
+          } else {
+            alert(`❌ Challenge Failed\n\nYour circuit didn't meet the criteria. Try optimizing it further!`);
+          }
+        }
+        socket.disconnect();
+      });
+      setTimeout(() => { if (socket.connected) { socket.disconnect(); setLoading(false); setOutput({ error: 'Connection to execution server timed out.', errorType: 'timeout' }); } }, 20000);
+    } catch (err) {
+      setLoading(false);
+      setOutput({ error: 'Failed to connect to execution server.', errorType: 'queue' });
+    }
+  };
 
   const runCode = async () => {
     const code = files[activeFile];
@@ -781,6 +851,15 @@ export default function Lab() {
                 <option value="thermal">Thermal Relaxation</option>
               </select>
 
+              {module?.challenge && (
+                <button 
+                  onClick={submitChallenge} 
+                  disabled={loading}
+                  style={{ background: '#10b981', color: '#fff', border: '1px solid #059669', padding: '0.4rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+                  {loading ? 'Submitting...' : '🏆 Submit Challenge'}
+                </button>
+              )}
+
               <button 
                 className="tour-run-btn" 
                 onClick={runCode} 
@@ -872,7 +951,7 @@ export default function Lab() {
                 <div style={{ height: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--panel-bg)', display: 'flex', flexDirection: 'column' }}>
                   {/* Output Tabs */}
                   <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid var(--border-color)' }}>
-                    {['visualizer', 'terminal', 'snippets', 'history'].map(tab => (
+                    {['visualizer', 'terminal', 'snippets', 'history', ...(module?.challenge ? ['challenge'] : [])].map(tab => (
                       <button 
                         key={tab}
                         onClick={() => setActiveOutputTab(tab as any)}
@@ -971,7 +1050,7 @@ export default function Lab() {
                       <QuantumSnippets 
                         onSelect={(snippetCode) => {
                           setFiles(prev => ({ ...prev, [activeFile]: snippetCode }));
-                          setMode('code');
+                          setViewMode('code');
                           setActiveOutputTab('terminal');
                         }}
                       />
@@ -1008,6 +1087,31 @@ export default function Lab() {
                             ))}
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {/* Challenge Tab */}
+                    {activeOutputTab === 'challenge' && module?.challenge && (
+                      <div style={{ padding: '1.5rem', height: '100%', overflowY: 'auto' }}>
+                        <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', padding: '1.5rem' }}>
+                          <h2 style={{ margin: '0 0 1rem 0', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span>🏆</span> {module.challenge.title}
+                          </h2>
+                          <p style={{ fontSize: '1.1rem', lineHeight: 1.5, marginBottom: '1.5rem' }}>
+                            {module.challenge.description}
+                          </p>
+                          <div style={{ background: '#111', padding: '1rem', borderRadius: '4px', borderLeft: '4px solid #10b981' }}>
+                            <h4 style={{ margin: '0 0 0.5rem 0', color: '#aaa' }}>Target Criteria:</h4>
+                            <ul style={{ margin: 0, paddingLeft: '1.5rem', color: '#ddd' }}>
+                              {Object.entries(module.challenge.criteria).map(([k, v]) => (
+                                <li key={k}><strong>{k}</strong>: {v as any}</li>
+                              ))}
+                            </ul>
+                          </div>
+                          <p style={{ marginTop: '1.5rem', color: '#aaa', fontSize: '0.9rem' }}>
+                            When you are ready, click <strong>"Submit Challenge"</strong> at the top to have your code graded. Good luck!
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>

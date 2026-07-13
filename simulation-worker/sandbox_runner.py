@@ -35,12 +35,18 @@ def run_simulation(code, noise_model_name='ideal'):
                     
         counts = {}
         diagram = ""
+        gateCount = 0
+        depth = 0
+        runtimeMs = 0
         
         if qc is not None:
             try:
                 diagram = qc.draw('text')
             except:
                 pass
+            
+            gateCount = qc.size()
+            depth = qc.depth()
             
             if len(qc.clbits) > 0:
                 try:
@@ -61,8 +67,12 @@ def run_simulation(code, noise_model_name='ideal'):
                         simulator = AerSimulator(noise_model=noise_model)
                         
                     compiled_circuit = transpile(qc, simulator)
+                    
+                    import time
+                    start_time = time.time()
                     job = simulator.run(compiled_circuit)
                     counts = job.result().get_counts()
+                    runtimeMs = (time.time() - start_time) * 1000
                 except:
                     pass
         
@@ -70,7 +80,12 @@ def run_simulation(code, noise_model_name='ideal'):
             "status": "success", 
             "counts": counts, 
             "diagram": str(diagram),
-            "output": printed_output
+            "output": printed_output,
+            "metrics": {
+                "gateCount": gateCount,
+                "depth": depth,
+                "runtimeMs": runtimeMs
+            }
         }
     except Exception as e:
         return {"error": str(e)}

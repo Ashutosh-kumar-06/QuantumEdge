@@ -6,6 +6,8 @@ const JobSchema = new mongoose.Schema({
     jobId: { type: String, required: true, unique: true }, // A unique random string identifying this specific run
     language: { type: String, required: true }, // The programming language used ('python' or 'cpp')
     code: { type: String, required: true }, // The actual code submitted by the user
+    challengeId: { type: String }, // Optional: If this job is a challenge submission
+    username: { type: String }, // Optional: User who submitted the challenge
     // The current status of the job. It starts as 'queued' by default
     status: { type: String, enum: ['queued', 'processing', 'completed', 'failed'], default: 'queued' },
     // A flexible field to store the JSON results (like measurement counts and circuit diagrams)

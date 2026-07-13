@@ -9,7 +9,13 @@ const ModuleSchema = new mongoose.Schema({
   prerequisites: [{ type: String }], // Array of module IDs that should be completed before this one
   estHours: { type: Number }, // Estimated time to complete the module in hours
   content: { type: String }, // The full markdown content of the tutorial
-  starterCode: { type: String } // The initial code loaded in the lab editor
+  starterCode: { type: String }, // The initial code loaded in the lab editor
+  challenge: {
+    title: { type: String },
+    description: { type: String },
+    criteria: { type: mongoose.Schema.Types.Mixed }, // Arbitrary JSON for target metrics (maxGates, targetFidelity, maxRuntimeMs, etc.)
+    metric: { type: String } // Which metric is used for scoring ('fidelity', 'gates', 'runtime')
+  }
 });
 
 // Define the structure of a complete Course

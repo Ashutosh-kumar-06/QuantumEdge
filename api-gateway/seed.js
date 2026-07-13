@@ -234,9 +234,24 @@ async function seed() {
     // Clear existing data
     await Course.deleteMany({});
     await User.deleteMany({});
+    const challengeData = {
+      'quantum-fundamentals': { title: '1-Qubit Superposition', description: 'Create a superposition state with exactly 1 gate (Hadamard).', metric: 'gates', criteria: { maxGates: 1 } },
+      'programming-foundations': { title: 'Python Fibonacci', description: 'Print output.', metric: 'gates', criteria: { maxGates: 100 } },
+      'intro-to-qiskit': { title: 'Circuit Size Optimization', description: 'Create a 3-qubit circuit with depth <= 3.', metric: 'depth', criteria: { maxDepth: 3 } },
+      'quantum-gates': { title: 'Bell State Preparation', description: 'Maximize the fidelity of this Bell state preparation.', metric: 'fidelity', criteria: { targetFidelity: 1.0, targetState: 'bell' } },
+      'circuit-visualization': { title: 'GHZ State Size', description: 'Prepare a GHZ state with exactly 3 gates.', metric: 'gates', criteria: { maxGates: 3 } },
+      'parameterized-circuits': { title: 'Parameter Binding', description: 'Create a parameterized circuit with exactly 2 parameters and a depth of 2.', metric: 'depth', criteria: { maxDepth: 2 } },
+      'grovers-algorithm': { title: 'Grover Search Optimization', description: 'Implement a 3-qubit Grover search in under 15 gates.', metric: 'gates', criteria: { maxGates: 15 } },
+      'shors-algorithm': { title: 'QFT Optimization', description: 'Implement a 3-qubit QFT in under 10 gates.', metric: 'gates', criteria: { maxGates: 10 } },
+      'vqe': { title: 'VQE Runtime Optimization', description: 'Optimize this VQE circuit below 50ms runtime.', metric: 'runtime', criteria: { maxRuntimeMs: 50 } },
+      'capstone': { title: 'Hardware Efficient Ansatz', description: 'Design an advanced circuit using exactly 5 qubits and gate count <= 30.', metric: 'gates', criteria: { maxGates: 30 } }
+    };
     
     // Dynamically load content from markdown files if they exist
     for (let mod of curriculum) {
+      if (challengeData[mod.id]) {
+        mod.challenge = challengeData[mod.id];
+      }
       const filePath = path.join(__dirname, 'content', `${mod.id}.md`);
       if (fs.existsSync(filePath)) {
         mod.content = fs.readFileSync(filePath, 'utf8');

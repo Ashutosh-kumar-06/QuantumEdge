@@ -25,6 +25,7 @@ const Course = require('./models/Course');
 const User = require('./models/User');
 const Job = require('./models/Job');
 const Project = require('./models/Project');
+const ChallengeScore = require('./models/ChallengeScore');
 
 // Middleware
 const { requireAuth } = require('./middleware/auth');
@@ -261,10 +262,79 @@ async function connectQueue() {
           }
 
           const status = result.error ? 'failed' : 'completed';
-          await Job.findOneAndUpdate({ jobId }, { status, result });
+          const jobDoc = await Job.findOneAndUpdate({ jobId }, { status, result }, { new: true });
           
+          let challengeResult = null;
+          if (status === 'completed' && jobDoc && jobDoc.challengeId) {
+            try {
+              const course = await Course.findOne({ 'modules.id': jobDoc.challengeId });
+              if (course) {
+                const mod = course.modules.find(m => m.id === jobDoc.challengeId);
+                if (mod && mod.challenge) {
+                  const { metric, criteria } = mod.challenge;
+                  const metrics = result.metrics || {};
+                  let score = 0;
+                  let passed = false;
+
+                  if (metric === 'gates') {
+                    if (metrics.gateCount <= criteria.maxGates) {
+                      passed = true;
+                      score = Math.max(10, 1000 - metrics.gateCount * 10);
+                    }
+                  } else if (metric === 'depth') {
+                    if (metrics.depth <= criteria.maxDepth) {
+                      passed = true;
+                      score = Math.max(10, 1000 - metrics.depth * 20);
+                    }
+                  } else if (metric === 'runtime') {
+                    if (metrics.runtimeMs <= criteria.maxRuntimeMs) {
+                      passed = true;
+                      score = Math.max(10, 1000 - Math.floor(metrics.runtimeMs));
+                    }
+                  } else if (metric === 'fidelity') {
+                    // Calculate fidelity if targetState is bell
+                    let fidelity = 0;
+                    if (result.counts) {
+                      const total = Object.values(result.counts).reduce((a, b) => a + b, 0);
+                      const p00 = (result.counts['00'] || 0) / total;
+                      const p11 = (result.counts['11'] || 0) / total;
+                      fidelity = Math.pow(Math.sqrt(p00 * 0.5) + Math.sqrt(p11 * 0.5), 2);
+                      metrics.fidelity = fidelity;
+                    }
+                    if (fidelity >= 0.95) {
+                      passed = true;
+                      score = Math.floor(fidelity * 1000);
+                    }
+                  }
+
+                  challengeResult = { passed, score, metrics, title: mod.challenge.title };
+
+                  if (passed && jobDoc.username !== 'Unknown') {
+                    // Update ChallengeScore
+                    await ChallengeScore.findOneAndUpdate(
+                      { username: jobDoc.username, challengeId: jobDoc.challengeId },
+                      { 
+                        $max: { score: score },
+                        $set: { metrics, code: jobDoc.code, timestamp: Date.now() }
+                      },
+                      { upsert: true, new: true }
+                    );
+
+                    // Award XP to user
+                    await User.findOneAndUpdate(
+                      { username: jobDoc.username },
+                      { $inc: { xp: score } }
+                    );
+                  }
+                }
+              }
+            } catch (e) {
+              console.error("Grading error:", e);
+            }
+          }
+
           // Emit result to connected websocket clients for this job
-          io.to(jobId).emit('job_result', { status, result });
+          io.to(jobId).emit('job_result', { status, result, challengeResult });
           
           channel.ack(msg);
         } catch (err) {
@@ -510,6 +580,46 @@ app.get('/api/leaderboard', async (req, res) => {
 });
 
 /**
+ * GET /api/leaderboard/:challengeId
+ * Returns the top 10 users for a specific challenge.
+ */
+app.get('/api/leaderboard/:challengeId', async (req, res) => {
+  try {
+    const { challengeId } = req.params;
+    const cacheKey = `leaderboard:challenge:${challengeId}`;
+    let cached = null;
+    if (redisClient && redisClient.isOpen) {
+      cached = await redisClient.get(cacheKey);
+    }
+    
+    if (cached) {
+      return res.json(JSON.parse(cached));
+    }
+
+    const topUsers = await ChallengeScore.find({ challengeId })
+      .sort({ score: -1, 'metrics.runtimeMs': 1 }) // Tie-breaker
+      .limit(10)
+      .select('username score metrics -_id');
+
+    const result = topUsers.map(u => ({
+      username: u.username,
+      score: u.score,
+      avatar: '🏆',
+      metrics: u.metrics
+    }));
+
+    if (redisClient && redisClient.isOpen) {
+      await redisClient.setEx(cacheKey, 60, JSON.stringify(result));
+    }
+
+    res.json(result);
+  } catch (e) {
+    console.error('Challenge Leaderboard Error:', e);
+    res.status(500).json({ error: 'Failed to fetch challenge leaderboard' });
+  }
+});
+
+/**
  * GET /api/user/:username/status
  * Fetches user subscription status
  */
@@ -618,6 +728,47 @@ app.post('/api/simulate', simulateLimiter, async (req, res) => {
     }
   } catch (e) {
     res.status(500).json({ error: 'Failed to create job', errorType: 'queue' });
+  }
+});
+
+/**
+ * POST /api/submit
+ * Submits a solution for a challenge to the grading queue.
+ */
+app.post('/api/submit', requireAuth, simulateLimiter, async (req, res) => {
+  try {
+    const { code, language, challengeId } = req.body;
+    if (!code || !challengeId) {
+      return res.status(400).json({ error: 'Code and challengeId required' });
+    }
+
+    // Pre-flight Syntax Validation (<50ms)
+    if (language === 'python' || !language) {
+      try {
+        execSync('python3 -c "import ast, sys; ast.parse(sys.stdin.read())"', { input: code, stdio: 'pipe' });
+      } catch (err) {
+        let errStr = err.stderr ? err.stderr.toString() : err.message;
+        errStr = errStr.replace(/<unknown>/g, 'main.py');
+        return res.status(400).json({ error: 'SyntaxError:\n' + errStr });
+      }
+    }
+
+    // Get username from decoded token set by requireAuth
+    const username = req.user.email ? req.user.email.split('@')[0] : 'Unknown';
+
+    const jobId = Math.random().toString(36).substring(7);
+    const job = { jobId, code, language: language || 'python', challengeId, username };
+    const queueName = job.language === 'cpp' ? 'cpp_jobs' : 'quantum_jobs';
+
+    if (channel) {
+      await Job.create({ jobId, language: job.language, code, challengeId, username });
+      channel.sendToQueue(queueName, Buffer.from(JSON.stringify(job)));
+      return res.json({ jobId, status: 'queued', queue: queueName });
+    } else {
+      return res.status(503).json({ error: 'Queue not ready', errorType: 'queue' });
+    }
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to submit challenge', errorType: 'queue' });
   }
 });
 

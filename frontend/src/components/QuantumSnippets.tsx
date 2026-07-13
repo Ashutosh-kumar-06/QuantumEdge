@@ -16,8 +16,8 @@ print("Circuit ready. Run the simulation to see the output!")`
   },
   {
     id: 'grover',
-    name: 'Grover\\'s Search (2 Qubits)',
-    description: 'Finds the marked state |11> with quadratic speedup.',
+    name: "Grover's Search (2 Qubits)",
+    description: "Finds the marked state |11> with quadratic speedup.",
     code: `from qiskit import QuantumCircuit
 from qiskit.circuit.library import GroverOperator, ZGate
 
@@ -41,8 +41,8 @@ print("Grover's circuit built!")`
   },
   {
     id: 'qft',
-    name: 'Quantum Fourier Transform',
-    description: 'Performs the QFT on 3 qubits. A core subroutine in Shor\\'s Algorithm.',
+    name: "Quantum Fourier Transform",
+    description: "Performs the QFT on 3 qubits. A core subroutine in Shor's Algorithm.",
     code: `from qiskit import QuantumCircuit
 from math import pi
 
