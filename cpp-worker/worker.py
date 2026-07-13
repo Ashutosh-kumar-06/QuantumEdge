@@ -37,9 +37,17 @@ def run_cpp_code(code, status_callback=None):
         # Secure DooD (Docker-out-of-Docker) execution: 
         # Spawn an ephemeral, network-disabled container to compile and run the C++ code
         cmd = [
-            "bash",
-            "-c", 
-            "cat > user_code.cpp && g++ user_code.cpp -o user_circuit -I/QuEST/QuEST/include -L/QuEST/build/QuEST -lQuEST -lm && ./user_circuit"
+            "docker", "run", "-i", "--rm", 
+            "--network", "none", # No internet access
+            "--memory", "256m", # Limit memory
+            "--cpus", "0.5", # Limit CPU usage
+            "--entrypoint", "bash",
+            "quantumedge-cpp-worker", 
+            # The bash command does three things:
+            # 1. 'cat > user_code.cpp' saves the incoming stdin to a file
+            # 2. 'g++ ...' compiles the file linking the QuEST library
+            # 3. './user_circuit' runs the compiled executable
+            "-c", "cat > user_code.cpp && g++ user_code.cpp -o user_circuit -I/QuEST/QuEST/include -L/QuEST/build/QuEST -lQuEST -lm && ./user_circuit"
         ]
         
         # Run the docker command, passing the user's C++ code via standard input (stdin)

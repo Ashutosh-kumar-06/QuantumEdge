@@ -34,12 +34,16 @@ def run_simulation(code, noise_model='ideal', status_callback=None):
     try:
         if status_callback:
             status_callback("Provisioning Sandbox...")
-        # Execute the untrusted code directly in the current container using a subprocess.
-        # This significantly decreases latency compared to Docker-out-of-Docker (DooD).
-        # We rely on the isolation of the simulation-worker container itself for security.
+        # Secure DooD (Docker-out-of-Docker) execution: 
+        # Spawn an ephemeral, network-disabled container to run the untrusted code
         cmd = [
-            "python", 
-            "sandbox_runner.py" 
+            "docker", "run", "-i", "--rm", 
+            "--network", "none", # No internet access to prevent malicious downloads/attacks
+            "--memory", "256m", # Limit memory to 256MB to prevent memory exhaustion
+            "--cpus", "0.5", # Limit CPU usage
+            "--entrypoint", "python",
+            "quantumedge-simulation-worker", 
+            "sandbox_runner.py" # The script inside the container that will actually execute the code
         ]
         
         # Pass both code and noiseModel via stdin as JSON
