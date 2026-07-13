@@ -243,7 +243,7 @@ export default function Lab() {
   const [isAiTyping, setIsAiTyping] = useState(false);
 
   useEffect(() => {
-    let timeout: NodeJS.Timeout;
+    let timeout: ReturnType<typeof setTimeout>;
     const handleChunk = ({ chunk }: { chunk: string }) => {
       setIsAiTyping(true);
       if (!editorRef.current) return;
@@ -521,10 +521,17 @@ export default function Lab() {
         return;
       }
       
-      const socket = io(import.meta.env.VITE_API_URL);
-      socket.on('connect', () => { socket.emit('subscribe_job', data.jobId); });
-      socket.on('job_status', (jobData) => { setOutput(prev => ({ ...prev, status: jobData.status })); });
-      socket.on('job_result', (jobData) => {
+      if (!socket.connected) socket.connect();
+      socket.emit('subscribe_job', data.jobId);
+      
+      const onStatus = (jobData: any) => { setOutput((prev: any) => ({ ...prev, status: jobData.status })); };
+      let timer: ReturnType<typeof setTimeout>;
+      
+      const onResult = (jobData: any) => {
+        socket.off('job_status', onStatus);
+        socket.off('job_result', onResult);
+        clearTimeout(timer);
+        
         setLoading(false);
         let result;
         if (jobData.status === 'failed') {
@@ -548,9 +555,17 @@ export default function Lab() {
             alert(`❌ Challenge Failed\n\nYour circuit didn't meet the criteria. Try optimizing it further!`);
           }
         }
-        socket.disconnect();
-      });
-      setTimeout(() => { if (socket.connected) { socket.disconnect(); setLoading(false); setOutput({ error: 'Connection to execution server timed out.', errorType: 'timeout' }); } }, 20000);
+      };
+      
+      socket.on('job_status', onStatus);
+      socket.on('job_result', onResult);
+      
+      timer = setTimeout(() => { 
+        socket.off('job_status', onStatus);
+        socket.off('job_result', onResult);
+        setLoading(false); 
+        setOutput({ error: 'Connection to execution server timed out.', errorType: 'timeout' }); 
+      }, 20000);
     } catch (err) {
       setLoading(false);
       setOutput({ error: 'Failed to connect to execution server.', errorType: 'queue' });
@@ -591,17 +606,17 @@ export default function Lab() {
         return;
       }
       
-      const socket = io(import.meta.env.VITE_API_URL);
+      if (!socket.connected) socket.connect();
+      socket.emit('subscribe_job', data.jobId);
       
-      socket.on('connect', () => {
-        socket.emit('subscribe_job', data.jobId);
-      });
+      const onStatus = (jobData: any) => { setOutput((prev: any) => ({ ...prev, status: jobData.status })); };
+      let timer: ReturnType<typeof setTimeout>;
 
-      socket.on('job_status', (jobData) => {
-        setOutput(prev => ({ ...prev, status: jobData.status }));
-      });
-
-      socket.on('job_result', (jobData) => {
+      const onResult = (jobData: any) => {
+        socket.off('job_status', onStatus);
+        socket.off('job_result', onResult);
+        clearTimeout(timer);
+        
         setLoading(false);
         let result;
         if (jobData.status === 'failed') {
@@ -626,16 +641,16 @@ export default function Lab() {
           code: code,
           output: result
         }, ...prev].slice(0, 10)); // Keep last 10 runs
+      };
 
-        socket.disconnect();
-      });
+      socket.on('job_status', onStatus);
+      socket.on('job_result', onResult);
 
-      setTimeout(() => {
-        if (socket.connected) {
-          socket.disconnect();
-          setLoading(false);
-          setOutput((prev: any) => prev?.status === 'Running...' ? { error: 'Simulation timed out' } : prev);
-        }
+      timer = setTimeout(() => { 
+        socket.off('job_status', onStatus);
+        socket.off('job_result', onResult);
+        setLoading(false); 
+        setOutput((prev: any) => prev?.status === 'Running...' ? { error: 'Simulation timed out' } : prev); 
       }, 30000);
 
     } catch (err: any) {
