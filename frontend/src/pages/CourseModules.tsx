@@ -146,7 +146,7 @@ export default function CourseModules() {
               <div 
                 key={proj._id} 
                 className="module-card glass-panel"
-                onClick={() => navigate(`/lab/sandbox?project=${proj._id}`)}
+                onClick={() => navigate(`/?project=${proj._id}`)}
               >
                 <div className="card-header">
                   <h3>{proj.title}</h3>

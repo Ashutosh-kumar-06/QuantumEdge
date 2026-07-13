@@ -69,8 +69,8 @@ function App() {
           <h1>QuantumEdge <span className="badge">PRO</span></h1>
           <nav>
             <ul>
-              <li className={location.pathname.startsWith('/lab') ? 'active' : ''}>
-                <Link to="/lab/sandbox">Lab</Link>
+              <li className={location.pathname === '/' || location.pathname.startsWith('/lab') ? 'active' : ''}>
+                <Link to="/">Lab</Link>
               </li>
               <li className={location.pathname === '/course_modules' ? 'active' : ''}>
                 <Link to="/course_modules">Modules</Link>
@@ -100,7 +100,7 @@ function App() {
         <main className="main-content">
           <Suspense fallback={<div style={{display: 'flex', justifyContent: 'center', marginTop: '20vh', color: 'var(--primary)'}}><h2>Loading...</h2></div>}>
             <Routes>
-              <Route path="/" element={<Navigate to="/lab/sandbox" replace />} />
+              <Route path="/" element={<Lab />} />
               <Route path="/course_modules" element={<CourseModules />} />
               <Route path="/leaderboard" element={<LeaderboardPage />} />
               <Route path="/auth" element={<Auth />} />

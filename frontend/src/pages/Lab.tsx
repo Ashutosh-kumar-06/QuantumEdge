@@ -461,8 +461,8 @@ export default function Lab() {
       });
       const data = await response.json();
       if (data._id) {
-        navigate(`/lab/sandbox?project=${data._id}`, { replace: true });
-        const shareUrl = window.location.origin + `/lab/sandbox?project=${data._id}`;
+        navigate(`/?project=${data._id}`, { replace: true });
+        const shareUrl = window.location.origin + `/?project=${data._id}`;
         navigator.clipboard.writeText(shareUrl);
         alert('Project saved to cloud! Shareable URL copied to clipboard.');
       }

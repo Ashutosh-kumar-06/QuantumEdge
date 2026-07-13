@@ -50,7 +50,7 @@ export default function ChatPage() {
     
     socket.on('room_ended', () => {
       alert("The host has ended the meeting.");
-      navigate('/lab/sandbox');
+      navigate('/');
     });
 
     return () => {
@@ -105,7 +105,7 @@ export default function ChatPage() {
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 60px)', width: '100%', overflow: 'hidden' }}>
       <div className="lab-header" style={{ padding: '0.5rem 1rem', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ margin: 0, fontSize: '1.2rem' }}>Chat Meeting Room: <span style={{ color: 'var(--primary)' }}>{roomId}</span></h2>
-        <button onClick={() => navigate('/lab/sandbox')} style={{ background: '#444', color: '#fff', border: 'none', padding: '0.4rem 1rem', borderRadius: '4px', cursor: 'pointer' }}>Leave Room</button>
+        <button onClick={() => navigate('/')} style={{ background: '#444', color: '#fff', border: 'none', padding: '0.4rem 1rem', borderRadius: '4px', cursor: 'pointer' }}>Leave Room</button>
       </div>
 
       <HostControls roomState={roomState} currentUser={user.email} onUpdatePermission={handleUpdatePermission} />
